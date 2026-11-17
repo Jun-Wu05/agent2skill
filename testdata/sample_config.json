@@ -1,0 +1,38 @@
+[
+  {
+    "name": "某厂_AUDIT_json_子规则",
+    "parser": {
+      "name": "json",
+      "filter": [
+        {
+          "name": "addFields",
+          "id": "additional_fields_filter",
+          "fields": {"product": "", "event_name": "", "event_level": "", "log_vendor": ""}
+        }
+      ]
+    },
+    "normalize": [
+      {"mappings": [], "field": "源地址", "sim": 0.99, "result": ["10.1.1.5"], "info": null, "entity": "网络", "required": false, "core": true, "value": null, "index": "src_ip"},
+      {"mappings": [], "field": "原始日志", "sim": true, "result": ["{\"src_ip\":\"10.1.1.5\",\"user\":\"admin\",\"action\":\"login\"}"], "info": null, "entity": "日志", "required": false, "core": false, "value": null, "index": "original_log"}
+    ]
+  },
+  {
+    "name": "某厂_IPS_json_子规则",
+    "parser": {
+      "name": "json",
+      "filter": null
+    },
+    "normalize": [
+      {"mappings": [], "field": "目的地址", "sim": 0.98, "result": ["192.168.1.20"], "info": null, "entity": "网络", "required": false, "core": true, "value": null, "index": "dst_ip"},
+      {"mappings": [], "field": "原始日志", "sim": true, "result": ["{\"dst_ip\":\"192.168.1.20\",\"threat\":\"隐蔽隧道\"}"], "info": null, "entity": "日志", "required": false, "core": false, "value": null, "index": "original_log"}
+    ]
+  },
+  {
+    "name": "某厂_通用_入口规则",
+    "parser": {
+      "name": "json",
+      "filter": null
+    },
+    "normalize": []
+  }
+]

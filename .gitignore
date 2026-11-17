@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# pytest
+.pytest_cache/
+
+# 测试临时目录（tests 用 .tmp_tests/ 而非系统 tempfile）
+.tmp_tests/
+
+# 会话级草稿与交接文档（不入库，issue tracker 为记录权威）
+.scratch/
