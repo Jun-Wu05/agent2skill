@@ -14,9 +14,7 @@ CLI 用法:
 
 from __future__ import annotations
 
-import argparse
 import copy
-import json
 import sys
 from pathlib import Path
 from typing import Any, List, Mapping, Optional
@@ -25,8 +23,7 @@ _SKILLS_ROOT = Path(__file__).resolve().parents[2]
 if str(_SKILLS_ROOT) not in sys.path:
     sys.path.insert(0, str(_SKILLS_ROOT))
 
-from _shared import report as skill_report
-from _shared.config_io import ConfigIOError, load_entities
+from _shared import cli
 from _shared.entity_scope import entities_in_scope, resolve_field_scope
 from _shared.event_binding import (
     EVENT_LEVEL_FIELD,
@@ -209,6 +206,18 @@ def _with_error_code(result: dict) -> dict:
     return result
 
 
+def _validate_add_args(data: list, field_name: str) -> Optional[dict]:
+    """空校验层（对齐其余四子命令的 _validate_*_args 结构，#13 欠账 2）。
+
+    纯函数 add_field 内的同名校验保留作直接调用方的防线。
+    """
+    if not data:
+        return {"status": "error", "code": "invalid_input", "message": "输入数据为空"}
+    if not field_name:
+        return {"status": "error", "code": "invalid_input", "message": "字段名不能为空"}
+    return None
+
+
 def add_field_guarded(
     data: list,
     field_name: str,
@@ -219,14 +228,19 @@ def add_field_guarded(
     """带事件名称绑定守卫的字段添加。
 
     守卫顺序（任一命中即拒绝，稳定错误码）：
-    1. 寻址解析：target 未知名 → rule_name_not_found（附可用子规则
+    1. 空校验：data / 字段名为空 → invalid_input；
+    2. 寻址解析：target 未知名 → rule_name_not_found（附可用子规则
        提示），与其他子命令行为一致；
-    2. 直接添加【事件级别】被拒绝：级别随【事件名称】按绑定表联动写入；
-    3. 【事件名称】必须是 21 个合法分类名之一且不支持引用型值；
+    3. 直接添加【事件级别】被拒绝：级别随【事件名称】按绑定表联动写入；
+    4. 【事件名称】必须是 21 个合法分类名之一且不支持引用型值；
        合法时自动联动写入绑定的【事件级别】（同目标范围）。
-    4. 目标范围内已存在【事件级别】时返回 event_level_conflict
+    5. 目标范围内已存在【事件级别】时返回 event_level_conflict
        （skip_existing=True 时跳过该检查，由跳过语义兜底）。
     """
+    error = _validate_add_args(data, field_name)
+    if error is not None:
+        return error
+
     targets, scope_error = resolve_field_scope(data, target_names, "all")
     if scope_error is not None:
         return scope_error
@@ -303,81 +317,36 @@ def add_field_guarded(
 
 
 # ---------------------------------------------------------------------------
-# CLI（文件输入/输出契约）
+# CLI（文件输入/输出契约，同形骨架见 _shared/cli.py）
 # ---------------------------------------------------------------------------
+
+_SPEC = cli.CliSpec(
+    prog="add_fields.py",
+    description="在解析规则（mapping entities）中添加字段",
+    arguments=(
+        (("--field", "-f"), {"required": True, "help": "新字段名"}),
+        (
+            ("--value", "-v"),
+            {"default": None, "help": "字段值：固定值或 %%{index} 引用；缺省为空"},
+        ),
+        (
+            ("--skip-existing",),
+            {
+                "action": "store_true",
+                "help": "已存在同名字段的 entity 跳过而非整体失败",
+            },
+        ),
+    ),
+    # add 无 --group：分组寻址依赖事件名称标注，而 add 正是标注入口
+    with_group=False,
+    execute=lambda args, data, target_names: add_field_guarded(
+        data, args.field, args.value, target_names, args.skip_existing
+    ),
+)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    parser = argparse.ArgumentParser(
-        prog="add_fields.py",
-        description="在解析规则（mapping entities）中添加字段",
-    )
-    parser.add_argument(
-        "--input", "-i", required=True,
-        help="配置文件路径（Base64 txt / 原生 JSON / TXT，内容为 JSON 数组）",
-    )
-    parser.add_argument("--field", "-f", required=True, help="新字段名")
-    parser.add_argument(
-        "--value", "-v", default=None,
-        help="字段值：固定值或 %%{index} 引用；缺省为空",
-    )
-    parser.add_argument(
-        "--output", "-o", default=None,
-        help="修改后配置 JSON 输出路径（缺省 <输入名>.modified.json）",
-    )
-    parser.add_argument(
-        "--target", default=None,
-        help="目标子规则名（按 name 精确寻址），逗号分隔；缺省全部 entity",
-    )
-    parser.add_argument(
-        "--skip-existing", action="store_true",
-        help="已存在同名字段的 entity 跳过而非整体失败",
-    )
-    parser.add_argument(
-        "--no-export", action="store_true",
-        help="不产出 Base64 导出文件（缺省会一并产出）",
-    )
-    args = parser.parse_args(argv)
-
-    try:
-        data = load_entities(args.input)
-    except ConfigIOError as exc:
-        print(
-            json.dumps(
-                {"status": "error", "code": exc.code, "message": exc.message},
-                ensure_ascii=False,
-            )
-        )
-        return 1
-
-    target_names = None
-    if args.target:
-        target_names = [name.strip() for name in args.target.split(",") if name.strip()]
-
-    result = add_field_guarded(
-        data, args.field, args.value, target_names, args.skip_existing
-    )
-    if result.get("status") != "success":
-        print(json.dumps(result, ensure_ascii=False, indent=2))
-        return 1
-
-    input_path = Path(args.input)
-    output = (
-        Path(args.output)
-        if args.output
-        else input_path.with_name(input_path.stem + ".modified.json")
-    )
-    written = skill_report.write_result(
-        result["data"], output, make_export=not args.no_export
-    )
-    payload = {
-        "status": "success",
-        "message": result["message"],
-        "output": str(written["json_path"]),
-        "export": str(written["export_path"]) if written["export_path"] else None,
-    }
-    print(json.dumps(payload, ensure_ascii=False, indent=2))
-    return 0
+    return cli.run_cli(_SPEC, argv)
 
 
 if __name__ == "__main__":
