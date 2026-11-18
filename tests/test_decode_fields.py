@@ -330,5 +330,130 @@ class DecodeFieldGuardedTest(unittest.TestCase):
         self.assertEqual(result["data"][0]["parser"]["filter"][-1]["name"], "addFields")
 
 
+class CliEndToEndTest(unittest.TestCase):
+    """文件契约端到端：Base64 输入 → 修改后 JSON + 平台可导入 Base64 输出。
+
+    以进程内调用 main() + stdout 重定向实现，避免子进程管道
+    （受限环境下 EPERM），任何环境可跑；真实 CLI 演示见 SKILL.md。
+    """
+
+    FIXTURE = ROOT / "testdata" / "sample_config.json"
+
+    def setUp(self):
+        (ROOT / ".tmp_tests").mkdir(exist_ok=True)
+        self._tmp = Path(tempfile.mkdtemp(dir=str(ROOT / ".tmp_tests")))
+        self.addCleanup(self._cleanup)
+
+    def _cleanup(self):
+        import shutil
+
+        shutil.rmtree(self._tmp, ignore_errors=True)
+        tmp_root = ROOT / ".tmp_tests"
+        if tmp_root.is_dir() and not any(tmp_root.iterdir()):
+            tmp_root.rmdir()
+
+    def _run(self, *argv):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = decode_fields.main([*argv])
+        return code, buf.getvalue()
+
+    def test_e2e_decode_on_base64_input(self):
+        payload = json.loads(self.FIXTURE.read_text(encoding="utf-8"))
+        b64_file = self._tmp / "config.b64.txt"
+        b64_file.write_text(
+            base64.b64encode(
+                json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            ).decode("ascii"),
+            encoding="utf-8",
+        )
+        output = self._tmp / "out.modified.json"
+        code, stdout = self._run(
+            "--input", str(b64_file),
+            "--fields", "src_ip",
+            "--output", str(output),
+        )
+        self.assertEqual(code, 0, stdout)
+        report = json.loads(stdout)
+        self.assertEqual(report["status"], "success")
+        self.assertIn("成功为 1 个 entity 启用 base64 解码: src_ip", report["message"])
+        # 缺 src_ip 的 IPS 子规则按名报告跳过；无 normalize 的入口规则计数
+        self.assertIn("某厂_IPS_json_子规则（缺 src_ip）", report["message"])
+        self.assertIn("跳过 1 个无 normalize 的 entity", report["message"])
+        # 修改后 JSON：AUDIT 子规则追加解码过滤器（原有 addFields 过滤器原样保留）
+        updated = json.loads(output.read_text(encoding="utf-8"))
+        filters = updated[0]["parser"]["filter"]
+        self.assertEqual(len(filters), 2)
+        self.assertEqual(filters[0]["id"], "additional_fields_filter")
+        decode_filter = filters[1]
+        self.assertEqual(decode_filter["name"], "addFields")
+        self.assertEqual(decode_filter["id"], "")
+        self.assertEqual(decode_filter["fields"], {"src_ip": decode_ognl("src_ip")})
+        # 原地覆盖：normalize 不变（不双写）
+        self.assertEqual(len(updated[0]["normalize"]), 2)
+        # 平台可导入 Base64 导出文件
+        export = Path(report["export"])
+        self.assertTrue(export.exists())
+        self.assertRegex(export.name, r"^fieldadjusted_config_\d{8}_\d{4}\.txt$")
+        decoded = json.loads(base64.b64decode(export.read_text(encoding="utf-8")))
+        self.assertEqual(decoded, updated)
+
+    def test_e2e_reserved_field_exit_code(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--fields", "original_log",
+            "--output", str(self._tmp / "o.json"),
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "reserved_field_rejected")
+
+    def test_e2e_field_not_found_exit_code(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--fields", "不存在字段",
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "field_not_found")
+        self.assertIn("并集", report["message"])
+
+    def test_e2e_unknown_target_exit_code(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--fields", "src_ip",
+            "--target", "不存在的规则",
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "rule_name_not_found")
+
+    def test_e2e_missing_input_reports_config_required(self):
+        code, stdout = self._run(
+            "--input", str(self._tmp / "nope.txt"),
+            "--fields", "src_ip",
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "config_required")
+
+    def test_e2e_no_export_flag(self):
+        output = self._tmp / "out.modified.json"
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--fields", "dst_ip",
+            "--target", "某厂_IPS_json_子规则",
+            "--output", str(output),
+            "--no-export",
+        )
+        self.assertEqual(code, 0, stdout)
+        report = json.loads(stdout)
+        self.assertIsNone(report["export"])
+        # 只有修改后 JSON 落盘
+        self.assertTrue(output.exists())
+        exports = list(self._tmp.glob("fieldadjusted_config_*.txt"))
+        self.assertEqual(exports, [])
+
+
 if __name__ == "__main__":
     unittest.main()
