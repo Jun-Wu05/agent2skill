@@ -1,0 +1,281 @@
+"""正则提取字段 - 从解析规则的已有字段中按正则提取新字段。
+
+field-adjust 技能的 regex-extract 子命令核心：对每个目标 entity 双写
+``parser.filter`` 的 customFunction 过滤器（functionName=extractRegexField，
+args 三元组 = 新增字段 / 被提取字段 / 正则）与 normalize 末尾的新字段
+预览条目（预览值取第一个捕获组，无捕获组取整条匹配）。
+
+正则表达式由宿主 agent 按样本生成后传入；脚本只做确定性校验：必须可
+编译（否则 invalid_pattern），有样本时必须 ``re.fullmatch`` 全匹配整条
+样本（非全匹配不生效，整体拒绝 pattern_mismatch）。
+"""
+
+from __future__ import annotations
+
+import copy
+import re
+from typing import List, Optional
+
+# 运行时 OGNL 提取语句（固定；arg2=被提取字段，arg3=正则）
+_OGNL_TEMPLATE = (
+    '<%@com.hansight.dataviewer.utils.ognl.OgnlUtils@regexExtraction(arg2,"arg3")%>'
+)
+
+
+def _default_field_name(
+    keyword: Optional[str], source_field: str, norm_map: dict
+) -> str:
+    """缺省命名：提取关键词优先（冲突加 new 前缀），无关键词时退回源字段尾段。"""
+    base = (keyword or "").strip() or source_field.rsplit(".", 1)[-1]
+    if base not in norm_map:
+        return base
+    return f"new{base}"
+
+
+def _normalize_entry(index: str, result_value: str) -> dict:
+    """构建正则提取新增字段的 normalize 条目（result 为样本预览值）。"""
+    return {
+        "mappings": [],
+        "field": None,
+        "sim": None,
+        "result": [result_value] if result_value else [],
+        "info": None,
+        "entity": None,
+        "required": False,
+        "core": None,
+        "value": None,
+        "index": index,
+    }
+
+
+def _build_function_item(new_field: str, source_field: str, pattern: str) -> dict:
+    """构建一个 extractRegexField 函数条目（args 三元组）。"""
+    return {
+        "functionName": "extractRegexField",
+        "ognl": _OGNL_TEMPLATE,
+        "functionViewName": "正则提取",
+        "fieldName": "",
+        "args": [
+            {
+                "name": "新增字段",
+                "args": "arg1",
+                "detail": "新增字段名称",
+                "type": "field",
+                "value": new_field,
+            },
+            {
+                "name": "被提取字段",
+                "args": "arg2",
+                "detail": "字符格式字段",
+                "type": "args",
+                "value": source_field,
+            },
+            {
+                "name": "正则表达式",
+                "args": "arg3",
+                "detail": "只提取第一个匹配项",
+                "type": "args",
+                "value": pattern,
+            },
+        ],
+    }
+
+
+def _is_custom_function_filter(filter_item: dict) -> bool:
+    """判断 filter 是否为可合并的 customFunction 过滤器。"""
+    return (
+        filter_item.get("name") == "customFunction"
+        and filter_item.get("id") == ""
+    )
+
+
+def _validate_extract_args(
+    data: list, new_field: Optional[str], source_field: str, pattern: str
+) -> Optional[dict]:
+    """输入校验（extract_field 与 extract_field_guarded 共用）。"""
+    if not data:
+        return {"status": "error", "code": "invalid_input", "message": "输入数据为空"}
+    if not source_field:
+        return {"status": "error", "code": "invalid_input", "message": "未指定被提取字段"}
+    if not pattern:
+        return {"status": "error", "code": "invalid_input", "message": "未指定正则表达式"}
+    try:
+        re.compile(pattern)
+    except re.error as error:
+        return {
+            "status": "error",
+            "code": "invalid_pattern",
+            "message": f"正则表达式不合法: {error}",
+        }
+    return None
+
+
+def extract_field(
+    data: list,
+    new_field: Optional[str],
+    source_field: str,
+    pattern: str,
+    keyword: Optional[str] = None,
+    target_names: Optional[List[str]] = None,
+) -> dict:
+    """
+    对 mapping entity 列表新增正则提取字段（per-entity 自适应）。
+
+    双写：parser.filter 追加（或合并进）customFunction 过滤器；
+    normalize 末尾追加新字段条目。被提取字段有样本值时，正则必须
+    **全匹配**整条样本（非全匹配不生效，整体拒绝）；预览值取第一个
+    捕获组（无捕获组取整条匹配）。
+
+    Args:
+        data: 解码后的 JSON 数组（mapping entities）
+        new_field: 新字段名；None 时按 keyword（提取目标关键词）自动
+            命名——关键词已存在则加 new 前缀；keyword 也缺省时退回
+            被提取字段名尾段。
+        source_field: 被提取字段（必须为 normalize 里的 index；可为
+            original_log 等「原始日志里的 X」主用例字段）
+        pattern: 正则表达式（必须可编译、全匹配样本整条）
+        keyword: 提取目标关键词（如 "client"、"Referer"），缺省命名用
+        target_names: 目标 entity 名单（按 name 精确匹配）；
+            None 表示全部 entity。名单外的 entity 原样透传。
+
+    Returns:
+        {"status": "success"|"error", "code"?, "data"?, "message": "..."}
+    """
+    error = _validate_extract_args(data, new_field, source_field, pattern)
+    if error is not None:
+        return error
+    compiled = re.compile(pattern)
+
+    targets = set(target_names) if target_names else None
+    results = []
+    applied = 0
+    skipped_empty = 0
+    skipped_reasons: list[tuple[str, str]] = []
+    all_missing_source = True
+    union_indexes: set[str] = set()
+    resolved_name = new_field or None
+
+    for entity in data:
+        entity = copy.deepcopy(entity)
+
+        if targets is not None and entity.get("name") not in targets:
+            results.append(entity)
+            continue
+
+        normalize = entity.get("normalize") or []
+        name = entity.get("name") or "<未命名>"
+        if not normalize:
+            skipped_empty += 1
+            results.append(entity)
+            continue
+
+        norm_map = {item.get("index"): item for item in normalize if item.get("index")}
+        union_indexes.update(norm_map)
+
+        # 缺被提取字段的子规则跳过并按名报告（子规则字段集互不相同）
+        if source_field not in norm_map:
+            skipped_reasons.append((name, f"缺 {source_field}"))
+            results.append(entity)
+            continue
+        all_missing_source = False
+
+        # 新字段名解析：显式传入优先；缺省按提取关键词命名（冲突加 new 前缀）
+        if not resolved_name:
+            resolved_name = _default_field_name(keyword, source_field, norm_map)
+        if resolved_name in norm_map:
+            return {
+                "status": "error",
+                "code": "field_conflict",
+                "message": f"新增字段 '{resolved_name}' 已存在，请先删除或更换名称",
+            }
+
+        # 样本验证：正则必须全匹配整条样本（非全匹配不生效，整体拒绝）
+        sample_entry = norm_map.get(source_field, {})
+        sample_result = sample_entry.get("result") or []
+        sample_text = str(sample_result[0]) if sample_result else ""
+        preview_value = ""
+        if sample_text:
+            matched = compiled.fullmatch(sample_text)
+            if matched is None:
+                return {
+                    "status": "error",
+                    "code": "pattern_mismatch",
+                    "message": (
+                        f"正则无法全匹配「{source_field}」的样本"
+                        "（必须整条匹配才能生效），请调整正则或样本"
+                    ),
+                }
+            preview_value = matched.group(1) if matched.groups() else matched.group(0)
+
+        # 1. 追加（或合并进）customFunction 过滤器
+        parser = entity.get("parser") or {}
+        # 入口规则模板的 filter 可能为 null，初始化为空数组再追加
+        filters = parser.get("filter") or []
+        custom_filter = next(
+            (f for f in filters if _is_custom_function_filter(f)), None
+        )
+        if custom_filter is None:
+            custom_filter = {
+                "custom_name": "extractRegexField",
+                "fields": [],
+                "name": "customFunction",
+                "id": "",
+            }
+            filters.append(custom_filter)
+
+        function_item = _build_function_item(resolved_name, source_field, pattern)
+        existing_index = next(
+            (
+                i for i, item in enumerate(custom_filter.get("fields") or [])
+                if isinstance(item, dict)
+                and any(
+                    arg.get("args") == "arg1" and arg.get("value") == resolved_name
+                    for arg in item.get("args", [])
+                    if isinstance(arg, dict)
+                )
+            ),
+            None,
+        )
+        if existing_index is not None:
+            custom_filter["fields"][existing_index] = function_item
+        else:
+            custom_filter["fields"].append(function_item)
+
+        parser["filter"] = filters
+        entity["parser"] = parser
+
+        # 2. normalize 双写（预览值）；同名函数条目覆盖时不再追加
+        if existing_index is None:
+            normalize.append(_normalize_entry(resolved_name, preview_value))
+            entity["normalize"] = normalize
+
+        applied += 1
+        results.append(entity)
+
+    # 所有目标子规则都缺被提取字段 → 真正的 field_not_found（并集词表辅助定位）
+    if applied == 0 and skipped_reasons and all_missing_source:
+        preview = "、".join(sorted(union_indexes)[:30])
+        return {
+            "status": "error",
+            "code": "field_not_found",
+            "message": (
+                f"字段 {source_field} 不存在于任何（目标）子规则；"
+                f"全部子规则字段并集: {preview}"
+                + ("等" if len(union_indexes) > 30 else "")
+            ),
+        }
+
+    display_name = resolved_name or _default_field_name(keyword, source_field, {})
+    message = (
+        f"成功为 {applied} 个 entity 添加正则提取字段 '{display_name}'"
+        f"（来源: {source_field}）"
+    )
+    if targets is not None:
+        message += f"（目标 {len(targets)} 个）"
+    if skipped_reasons:
+        detail = "；".join(f"{n}（{r}）" for n, r in skipped_reasons[:5])
+        more = f" 等 {len(skipped_reasons)} 条" if len(skipped_reasons) > 5 else ""
+        message += f"；跳过：{detail}{more}"
+    if skipped_empty:
+        message += f"（跳过 {skipped_empty} 个无 normalize 的 entity）"
+    return {"status": "success", "data": results, "message": message}
