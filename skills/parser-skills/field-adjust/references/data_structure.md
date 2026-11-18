@@ -113,6 +113,36 @@ base64 解码启用时写入（addFields 的一种），声明运行时对指定
 - 识别条件：`name=addFields`、`id=""` 且**全部**值含 `Base64Decode(`——重复调用合并进该过滤器（幂等）；固定值与 OGNL 混合的 addFields 过滤器不算解码过滤器，会另建新的
 - `original_log` / `rule_name_list` / `日志类型` 与【事件名称】/【事件级别】拒绝解码
 
+## customFunction 过滤器结构（正则提取）
+
+正则提取字段时写入，声明运行时按正则从被提取字段的值中提取第一个匹配项为新字段：
+
+```json
+{
+  "custom_name": "extractRegexField",
+  "fields": [
+    {
+      "functionName": "extractRegexField",
+      "ognl": "<%@com.hansight.dataviewer.utils.ognl.OgnlUtils@regexExtraction(arg2,\"arg3\")%>",
+      "functionViewName": "正则提取",
+      "fieldName": "",
+      "args": [
+        {"name": "新增字段", "args": "arg1", "detail": "新增字段名称", "type": "field", "value": "提取用户"},
+        {"name": "被提取字段", "args": "arg2", "detail": "字符格式字段", "type": "args", "value": "original_log"},
+        {"name": "正则表达式", "args": "arg3", "detail": "只提取第一个匹配项", "type": "args", "value": "[\\S\\s]*\"user\":\"(.*?)\"[\\S\\s]*"}
+      ]
+    }
+  ],
+  "name": "customFunction",
+  "id": ""
+}
+```
+
+- `ognl` 为固定语句（字面量 `arg2` / `"arg3"` 指向同条目 args 数组的对应位置，不替换）
+- 识别条件：`name=customFunction` 且 `id=""`——重复调用合并进该过滤器；args 中 arg1 与新字段同名的函数条目**原地覆盖**（新正则生效），不重复追加
+- normalize 同步追加预览条目：`result` 为被提取字段样本值经正则**全匹配**后的第一个捕获组（无捕获组取整条），`index` 为新字段名——这是双写语义（与 base64 解码的原地覆盖不同）
+- 正则必须可编译且有样本时必须全匹配整条样本，否则整体拒绝；新增字段名撞系统保留字段或【事件名称】/【事件级别】被拒（被提取字段不受限，original_log 合法）
+
 ## base64 解码示例 - 完整输入输出
 
 ### 输入数据
@@ -245,6 +275,29 @@ normalize 新增：
 {"index": "请求头", "result": ["%{reqheader}"], ...}
 ```
 
+## 正则提取示例 - 完整输入输出
+
+### 输入数据
+normalize:
+```json
+[
+  {"index": "original_log", "result": ["{\"src_ip\":\"10.1.1.5\",\"user\":\"admin\"}"], "field": "原始日志", "sim": true, "entity": "日志", "required": false, "core": false, "mappings": [], "info": null, "value": null}
+]
+```
+
+### 提取指令
+"从原始日志里提取 user"（正则由 agent 按样本生成：`[\S\s]*"user":"(.*?)"[\S\s]*`，全匹配样本整条，取第一个捕获组）
+
+### 输出数据
+normalize 追加预览条目（result 为第一个捕获组）：
+```json
+{"index": "user", "result": ["admin"], "mappings": [], "field": null, "sim": null, "info": null, "entity": null, "required": false, "core": null, "value": null}
+```
+
+filter 追加 customFunction 过滤器（结构见上文「customFunction 过滤器结构（正则提取）」，arg1=user / arg2=original_log / arg3=正则）。
+
+再次对同一新字段提取（arg1 同名）时函数条目原地覆盖、normalize 不再追加；新字段名已存在于该子规则字段集时报 `field_conflict`。
+
 ## 注意事项
 
 - `result` 的值与 addFields filter 中的 value 保持一致
@@ -256,3 +309,4 @@ normalize 新增：
 - 合并目标为系统保留字段或【事件名称】/【事件级别】时被拒绝；目标字段与源字段重名（自引用）被拒绝
 - 合并的 per-entity 自适应：缺任一源或目标已存在的子规则跳过并按名报告；所有目标子规则都缺源字段时报 `field_not_found`（附字段并集预览）
 - base64 解码的 per-entity 自适应：缺任一要解码字段的子规则跳过并按名报告；所有目标子规则都缺该字段时报 `field_not_found`（只点名真正缺失的字段 + 并集预览）
+- 正则提取的 per-entity 自适应：缺被提取字段的子规则跳过并按名报告；所有目标子规则都缺被提取字段时报 `field_not_found`（附字段并集预览）；正则无法全匹配有样本子规则的样本整条时**整体拒绝**（`pattern_mismatch`）

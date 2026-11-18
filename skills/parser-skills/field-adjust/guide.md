@@ -1,6 +1,6 @@
 # 字段调整（field-adjust）子模块指南
 
-> parser-skills 的子模块：对解析规则（Base64 配置或映射生成的子规则）执行字段级操作——添加、删除、合并、base64 解码、正则提取。当前已实现【添加字段】（`scripts/add_fields.py`）、【删除字段】（`scripts/delete_fields.py`）、【合并字段】（`scripts/merge_fields.py`）与【base64 解码】（`scripts/decode_fields.py`）四个子命令，正则提取按计划交付中。
+> parser-skills 的子模块：对解析规则（Base64 配置或映射生成的子规则）执行字段级操作——添加、删除、合并、base64 解码、正则提取。当前已实现【添加字段】（`scripts/add_fields.py`）、【删除字段】（`scripts/delete_fields.py`）、【合并字段】（`scripts/merge_fields.py`）、【base64 解码】（`scripts/decode_fields.py`）与【正则提取】（`scripts/extract_fields.py`）五个子命令，field-adjust 子模块全部交付。
 
 ## 何时使用
 
@@ -10,10 +10,12 @@
 - 用户说「删除字段」「移除字段」「删掉某字段」时 → **delete 子命令**（支持一次删多个、按子规则名或威胁/非威胁组寻址）
 - 用户说「合并字段」「把 X 和 Y 合并成 Z」时 → **merge 子命令**（至少 2 个源字段 + 1 个合并目标字段，支持分隔符）
 - 用户说「base64 解码 X」「解码字段 X / Y」「还原 X 的明文」且 X 是**已有字段**时 → **base64-decode 子命令**（原地覆盖字段值，不新增字段）
+- 用户说「正则提取」「从原始日志/某字段里提取 X」且能给出（或由 agent 按样本生成）正则时 → **regex-extract 子命令**（从已有字段提取新字段）。「原始日志里的 X」指 original_log、「请求头里的 X」指 req_header
 - **消歧边界**（不得互换）：
   - 「删除字段 X」是字段调整（移除整个字段）→ 本模块 delete 子命令
   - 「取消/删除 X 的映射」是取消映射（只清 mappings，字段保留）→ enum-mapping 子模块（未实现）
   - 「把 X 当作日志类型」是日志类型提取 → log-classification 子模块（未实现）
+  - 「正则提取 X」是按正则生成新字段 → 本模块 regex-extract 子命令；「提取 X 的枚举值」是枚举提取 → enum-mapping 子模块（未实现）
 
 ## 前置条件
 
@@ -22,6 +24,7 @@
 - delete：用户指定了要删除的字段名（一个或多个，逗号分隔）
 - merge：用户指定了至少 2 个源字段名（逗号分隔）与合并产出的目标字段名；分隔符缺省为空字符串
 - base64-decode：用户指定了要解码的**已有字段**名（一个或多个，逗号分隔）；解码只写运行时覆盖指令，值由解析器在运行时还原
+- regex-extract：用户指定了被提取的**已有字段**名与正则表达式（正则可由 agent 按该字段的样本值生成后传入，但必须全匹配样本整条）；新字段名可缺省（按关键词自动命名）
 
 ## 输入/输出契约
 
@@ -41,8 +44,10 @@
   - `rule_name_not_found`：`--target` 未知名，或 `--group` 组内无匹配
   - `event_annotation_required`：按威胁/非威胁分组时配置内无任何【事件名称】标注
   - `field_reference_conflict`：被删字段仍被 merger 源字段或 `%{字段}` 占位引用
-  - `field_not_found`：合并的源字段、或要解码的字段不存在于任何（目标）子规则（附字段并集预览）
-  - `invalid_input`：数据为空 / 字段名为空 / 源字段少于 2 个 / 合并目标自引用
+  - `field_not_found`：合并的源字段、要解码的字段或正则提取的被提取字段不存在于任何（目标）子规则（附字段并集预览）
+  - `invalid_pattern`：正则表达式不合法（无法编译）
+  - `pattern_mismatch`：正则无法全匹配被提取字段的样本整条（必须整条匹配才能生效）
+  - `invalid_input`：数据为空 / 字段名为空 / 源字段少于 2 个 / 合并目标自引用 / 未指定被提取字段或正则
 
 ## 调用方式
 
@@ -220,6 +225,52 @@ per-entity 自适应：子规则字段集互不相同（映射表展示的是并
 4. **事件绑定字段拦截**：【事件名称】或【事件级别】→ `invalid_event_name`（解码会破坏 21 分类绑定，事件字段请走添加字段）
 5. **全缺字段校验**：所有目标子规则都缺某个要解码的字段 → `field_not_found`，消息只点名真正缺失的字段并附全部子规则字段并集预览（前 30 个）
 
+## 正则提取（regex-extract 子命令）
+
+脚本位于本子模块：`<parser-skills>/field-adjust/scripts/extract_fields.py`。输出契约与 add / delete / merge / base64-decode 一致（修改后 JSON + Base64 导出 + stdout 报告，不原地覆盖输入）。
+
+```bash
+# 基本用法（从原始日志提取用户名，正则由 agent 按样本生成）
+python <parser-skills>/field-adjust/scripts/extract_fields.py \
+  --input <配置文件> --source-field original_log \
+  --pattern '[\S\s]*"user":"(.*?)"[\S\s]*' --field 提取用户
+
+# 缺省命名（按关键词 user 命名新字段，冲突加 new 前缀）+ 按子规则名寻址
+python <parser-skills>/field-adjust/scripts/extract_fields.py \
+  --input config.txt --source-field original_log \
+  --pattern '<正则>' --keyword user --target "某厂_AUDIT_json_子规则"
+
+# 按已标注【事件名称】分组寻址（threat=威胁组 / non-threat=非威胁组）
+python <parser-skills>/field-adjust/scripts/extract_fields.py \
+  --input config.txt --source-field original_log \
+  --pattern '<正则>' --keyword user --group threat
+```
+
+`--field` 与 `--keyword` 均可省略；`--target` 与 `--group` 并存时 **target 优先**。
+
+**正则的来源与校验**：正则表达式由宿主 agent 按被提取字段的样本值（normalize `result[0]`）生成后经 `--pattern` 传入，脚本零生成逻辑；脚本只做确定性校验——必须可编译（否则 `invalid_pattern`），被提取字段有样本值时必须 `re.fullmatch` **全匹配整条样本**（否则 `pattern_mismatch` 整体拒绝，非全匹配不生效）；无样本的子规则跳过校验照写（预览值为空）。
+
+### 数据操作（scripts/extract_fields.py）
+
+对每个目标 entity 执行（深拷贝，不改入参）：
+
+1. **追加（或合并进）customFunction 过滤器**（filter 为 null 的入口规则先初始化空数组）：`{"custom_name": "extractRegexField", "fields": [<函数条目>], "name": "customFunction", "id": ""}`，函数条目含固定 OGNL 与 args 三元组（arg1=新增字段 / arg2=被提取字段 / arg3=正则），运行时由解析器按正则提取第一个匹配项写入新字段
+2. **追加 normalize 预览条目**：`result` 为样本值经正则全匹配后的第一个捕获组（无捕获组取整条匹配），`index` 为新字段名
+3. **幂等**：customFunction 过滤器中已有 arg1 同名的函数条目时原地覆盖（新正则生效），不重复追加 normalize 条目
+
+**缺省命名链**：`--field` 缺省时按 `--keyword` 命名（关键词已存在于该子规则字段集时加 `new` 前缀）；`--keyword` 也缺省时退回被提取字段名尾段（按最后一个 `.` 切分）。
+
+per-entity 自适应：缺被提取字段的子规则**跳过并按名报告**，整体仍为 success；所有目标子规则都缺被提取字段时报 `field_not_found`（附全部子规则字段并集预览前 30 个）；无 normalize 的 entity 跳过且计数如实报告；`--target` 名单外与 `--group` 组外的 entity 原样透传。
+
+### 提取守卫链（任一命中即拒绝，退出码 1）
+
+1. **输入校验**：数据为空 / 未指定被提取字段或正则 → `invalid_input`；正则无法编译 → `invalid_pattern`
+2. **寻址校验**：`--target` 未知名 → `rule_name_not_found`（附可用子规则提示）；`--group` 分组时配置内无任何【事件名称】标注 → `event_annotation_required`，组内无匹配 → `rule_name_not_found`
+3. **新增字段名保留字段拦截**：新增字段名（含缺省命名基准 = 关键词或源字段尾段）为 `original_log` / `rule_name_list` / `日志类型` → `reserved_field_rejected`。**只拦新增字段名**——被提取字段不受限，original_log 是「原始日志里的 X」主用例
+4. **新增字段名事件字段拦截**：新增字段名为【事件名称】或【事件级别】→ `invalid_event_name`（提取值无 21 分类保证，事件字段请走添加字段）
+5. **样本全匹配校验**：任一有样本的目标子规则无法全匹配 → `pattern_mismatch` 整体拒绝（正则是全域输入，静默写入即静默失败）
+6. **新字段名冲突**：显式指定的新字段名在任一目标子规则已存在 → `field_conflict`（请先删除或更换名称；自动命名的 new 前缀会自行消解冲突）
+
 ## 约束与边界
 
 - add 字段名已存在且未开 `--skip-existing`：返回 `field_conflict`，建议更换名称或先删除原有字段
@@ -311,3 +362,24 @@ stdout 报告：
 ```
 
 AUDIT 子规则在原有 `additional_fields_filter` 之后追加解码过滤器 `{"fields": {"src_ip": "<%@com.hansight.dataviewer.utils.Base64@Base64Decode(src_ip)%>"}, "name": "addFields", "id": ""}`，normalize 保持 2 条不变（原地覆盖、不双写）；IPS 子规则缺 `src_ip` 如实跳过；空入口规则计数跳过。
+
+执行「从原始日志里提取 user」时（正则由 agent 按样本生成）：
+
+```bash
+python <parser-skills>/field-adjust/scripts/extract_fields.py \
+  --input testdata/sample_config.base64.txt --source-field original_log \
+  --pattern '[\S\s]*"user":"(.*?)"[\S\s]*' --keyword user \
+  --target 某厂_AUDIT_json_子规则
+```
+
+stdout 报告：
+```json
+{
+  "status": "success",
+  "message": "成功为 1 个 entity 添加正则提取字段 'user'（来源: original_log）（目标 1 个）",
+  "output": "testdata/sample_config.base64.modified.json",
+  "export": "testdata/fieldadjusted_config_20261118_1630.txt"
+}
+```
+
+AUDIT 子规则在原有 `additional_fields_filter` 之后追加 customFunction 过滤器（函数条目 arg1=user / arg2=original_log / arg3=正则），normalize 末尾追加预览条目（`index=user`，`result=["admin"]`——第一个捕获组）；IPS 子规则的 original_log 样本不含 `"user":"..."`，全匹配校验会整体拒绝（`pattern_mismatch`），故示例用 `--target` 限定 AUDIT 子规则；空入口规则计数跳过。

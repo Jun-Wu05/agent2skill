@@ -1,10 +1,10 @@
 ---
 name: parser-skills
-description: 解析规则技能集 - 日志解析规则（Base64 配置/JSON/TXT）与日志数据的统一处理入口，涵盖字段调整（添加/删除/合并/base64 解码/正则提取字段）、标准字段映射、日志类型提取、枚举提取与填充、威胁类型映射。当用户说"添加字段、新增字段、删除字段、移除字段、合并字段、base64 解码、解码字段、字段映射、映射到标准字段、日志类型、把X当作日志类型、提取枚举值、枚举填充、威胁类型、导出Base64配置"等解析规则操作时使用。当前已实现【添加字段】【删除字段】【合并字段】【base64 解码】子命令，其余功能按计划交付中。
+description: 解析规则技能集 - 日志解析规则（Base64 配置/JSON/TXT）与日志数据的统一处理入口，涵盖字段调整（添加/删除/合并/base64 解码/正则提取字段）、标准字段映射、日志类型提取、枚举提取与填充、威胁类型映射。当用户说"添加字段、新增字段、删除字段、移除字段、合并字段、base64 解码、解码字段、正则提取、从某字段提取X、字段映射、映射到标准字段、日志类型、把X当作日志类型、提取枚举值、枚举填充、威胁类型、导出Base64配置"等解析规则操作时使用。当前已实现【添加字段】【删除字段】【合并字段】【base64 解码】【正则提取】子命令，其余功能按计划交付中。
 license: MIT
 metadata:
-  version: "0.4.0"
-  status: 字段调整-添加/删除/合并/base64 解码字段已实现；其余子模块交付中
+  version: "0.5.0"
+  status: 字段调整-添加/删除/合并/base64 解码/正则提取字段已实现；其余子模块交付中
 ---
 
 # 解析规则技能集（parser-skills）
@@ -15,7 +15,7 @@ metadata:
 
 | 用户意图关键词 | 子模块 | 状态 | 指南与脚本 |
 |---|---|---|---|
-| 添加字段 / 新增字段 / 插入字段；设置事件名称；删除字段 / 移除字段；合并字段 / 把 X 和 Y 合并；base64 解码 / 解码字段 | **field-adjust**（字段调整） | ✅ 添加/删除/合并/base64 解码字段可用；正则提取交付中 | [field-adjust/guide.md](field-adjust/guide.md)，脚本 `field-adjust/scripts/` |
+| 添加字段 / 新增字段 / 插入字段；设置事件名称；删除字段 / 移除字段；合并字段 / 把 X 和 Y 合并；base64 解码 / 解码字段；正则提取 / 从某字段提取 X | **field-adjust**（字段调整） | ✅ 添加/删除/合并/base64 解码/正则提取字段可用 | [field-adjust/guide.md](field-adjust/guide.md)，脚本 `field-adjust/scripts/` |
 | 字段映射 / 映射到标准字段 / X 映射到 Y | field-mapping（标准字段映射） | 交付中 | — |
 | 日志类型 / 把 X 当作日志类型 / 区分日志类型 | log-classification（日志类型提取） | 交付中 | — |
 | 提取 X 的枚举值 / 填充 / 取消映射 | enum-mapping（枚举提取与填充） | 交付中 | — |
@@ -23,6 +23,7 @@ metadata:
 
 **消歧边界**（不得互换）：
 - 「删除字段 X」＝移除整个字段（field-adjust）；「取消/删除 X 的映射」＝只清值映射、字段保留（enum-mapping）
+- 「正则提取 / 从某字段提取 X」＝按正则生成新字段（field-adjust）；「提取 X 的枚举值」＝枚举提取（enum-mapping）
 - 带「作为/当作/设为日志类型」短语 → log-classification；无该短语的「提取 X 的枚举值」→ enum-mapping
 - 【事件名称】设置走 field-adjust 的添加字段（自动联动【事件级别】）；不支持单独添加事件级别
 
@@ -30,7 +31,7 @@ metadata:
 
 - **输入**：配置族文件（Base64 txt / 原生 JSON / TXT，内容为 mapping entities 的 JSON 数组，自动识别解码）或日志数据文件（Excel，须含「原始日志」列）
 - **输出**：每次修改后立即产出——①修改后配置 JSON（默认 `<输入名>.modified.json`，子模块间文件衔接的产物）②平台可导入的 Base64 文件（命名如 `fieldadjusted_config_YYYYMMDD_HHMM.txt`，与输出 JSON 同目录）③stdout JSON 摘要报告（`status` / `message` / `output` / `export`）
-- **不原地覆盖输入文件**；错误码稳定（`config_required` / `invalid_config` / `field_conflict` / `invalid_event_name` / `event_level_conflict` / `reserved_field_rejected` / `rule_name_not_found` / `event_annotation_required` / `field_reference_conflict` / `field_not_found` / `invalid_input` 等），失败退出码 1
+- **不原地覆盖输入文件**；错误码稳定（`config_required` / `invalid_config` / `field_conflict` / `invalid_event_name` / `event_level_conflict` / `reserved_field_rejected` / `rule_name_not_found` / `event_annotation_required` / `field_reference_conflict` / `field_not_found` / `invalid_pattern` / `pattern_mismatch` / `invalid_input` 等），失败退出码 1
 - **共享底座 `_shared/`**：config_io.py（配置族解码/编码）、report.py（统一输出与导出命名）、event_binding.py（事件名称 21 分类绑定表）、entity_scope.py（target/group 寻址解析）、field_policy.py（系统保留字段）——子模块脚本共用，禁止复制
 - 脚本路径相对本技能基目录书写，不依赖会话 cwd
 
@@ -110,6 +111,27 @@ python <parser-skills>/field-adjust/scripts/decode_fields.py \
 # 示例：按威胁组批量解码
 python <parser-skills>/field-adjust/scripts/decode_fields.py \
   --input <配置文件> --fields req_header --group threat
+```
+
+### 正则提取（field-adjust · regex-extract）
+
+从解析规则的已有字段中按正则提取新字段：正则由 agent 按样本生成后传入，脚本强制可编译 + 有样本时 `re.fullmatch` 全匹配整条（非全匹配不生效，整体拒绝）；对每个目标 entity 双写 customFunction 过滤器（extractRegexField，args 三元组 = 新增字段/被提取字段/正则）+ normalize 预览条目（取第一个捕获组）。新字段名缺省按关键词自动命名（冲突加 new 前缀）；同名重复提取原地覆盖函数条目（幂等）。新增字段名撞系统保留字段或【事件名称】/【事件级别】时拒绝（被提取字段不受限，original_log 是「原始日志里的 X」主用例）；缺源字段子规则 per-entity 跳过按名报告，全缺报 `field_not_found`（附并集预览）；支持按子规则名（`--target`）或威胁/非威胁组（`--group`）寻址，并存时 target 优先。完整规则、参数与示例见 [field-adjust/guide.md](field-adjust/guide.md)。
+
+```bash
+# 示例：从原始日志提取用户名（正则由 agent 按样本生成）
+python <parser-skills>/field-adjust/scripts/extract_fields.py \
+  --input <配置文件> --source-field original_log \
+  --pattern '[\S\s]*"user":"(.*?)"[\S\s]*' --field 提取用户
+
+# 示例：缺省命名（按关键词 user 命名新字段）+ 按子规则名寻址
+python <parser-skills>/field-adjust/scripts/extract_fields.py \
+  --input <配置文件> --source-field original_log \
+  --pattern '<正则>' --keyword user --target "规则A,规则B"
+
+# 示例：按威胁组批量提取
+python <parser-skills>/field-adjust/scripts/extract_fields.py \
+  --input <配置文件> --source-field original_log \
+  --pattern '<正则>' --keyword user --group threat
 ```
 
 `<parser-skills>` 为本技能基目录（agent 加载本技能时已知；在源仓库内即 `skills/parser-skills`）。
