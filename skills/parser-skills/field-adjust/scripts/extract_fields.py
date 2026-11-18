@@ -14,7 +14,17 @@ from __future__ import annotations
 
 import copy
 import re
+import sys
+from pathlib import Path
 from typing import List, Optional
+
+_SKILLS_ROOT = Path(__file__).resolve().parents[2]
+if str(_SKILLS_ROOT) not in sys.path:
+    sys.path.insert(0, str(_SKILLS_ROOT))
+
+from _shared.entity_scope import resolve_field_scope  # noqa: E402
+from _shared.event_binding import EVENT_LEVEL_FIELD, EVENT_NAME_FIELD  # noqa: E402
+from _shared.field_policy import RESERVED_FIELDS  # noqa: E402
 
 # 运行时 OGNL 提取语句（固定；arg2=被提取字段，arg3=正则）
 _OGNL_TEMPLATE = (
@@ -279,3 +289,74 @@ def extract_field(
     if skipped_empty:
         message += f"（跳过 {skipped_empty} 个无 normalize 的 entity）"
     return {"status": "success", "data": results, "message": message}
+
+
+# ---------------------------------------------------------------------------
+# 提取守卫链（寻址 / 新增字段名保留字段 / 新增字段名事件绑定字段）
+# ---------------------------------------------------------------------------
+
+
+def extract_field_guarded(
+    data: list,
+    new_field: Optional[str],
+    source_field: str,
+    pattern: str,
+    keyword: Optional[str] = None,
+    target_names: Optional[List[str]] = None,
+    group: str = "all",
+) -> dict:
+    """带守卫链的正则提取字段。
+
+    守卫顺序（任一命中即拒绝，稳定错误码）：
+    1. data / 被提取字段 / 正则空校验与编译校验 → invalid_input /
+       invalid_pattern；
+    2. 寻址解析：target 未知名 → rule_name_not_found；group 分组无标注
+       → event_annotation_required、组内无匹配 → rule_name_not_found；
+    3. 新增字段名为系统保留字段 → reserved_field_rejected（只拦新增
+       字段名——被提取字段不受限，original_log 是「原始日志里的 X」
+       主用例；缺省命名的基准名 = keyword 或源字段尾段，同样受拦，
+       冲突加 new 前缀消解后的名字不会撞保留字段）；
+    4. 新增字段名为【事件名称】/【事件级别】→ invalid_event_name
+       （提取值无 21 分类保证，事件字段请走添加字段）。
+    """
+    error = _validate_extract_args(data, new_field, source_field, pattern)
+    if error is not None:
+        return error
+
+    targets, scope_error = resolve_field_scope(data, target_names, group)
+    if scope_error is not None:
+        return scope_error
+
+    # 缺省命名基准：显式新字段名 > keyword > 源字段名尾段
+    effective_name = new_field or (
+        (keyword or "").strip() or source_field.rsplit(".", 1)[-1]
+    )
+    if effective_name in RESERVED_FIELDS:
+        return {
+            "status": "error",
+            "code": "reserved_field_rejected",
+            "message": (
+                f"新增字段名 '{effective_name}' 为系统保留字段，"
+                "不允许作为正则提取的目标字段"
+            ),
+        }
+
+    if effective_name in (EVENT_NAME_FIELD, EVENT_LEVEL_FIELD):
+        return {
+            "status": "error",
+            "code": "invalid_event_name",
+            "message": (
+                f"新增字段名 '{effective_name}' 为事件绑定字段，"
+                "提取值无 21 分类保证，会破坏事件名称/事件级别绑定；"
+                "事件字段请通过添加字段设置（自动按绑定关系联动写入）"
+            ),
+        }
+
+    return extract_field(
+        data,
+        new_field,
+        source_field,
+        pattern,
+        keyword=keyword,
+        target_names=targets,
+    )

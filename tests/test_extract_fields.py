@@ -18,6 +18,7 @@ for path in (str(ROOT), str(ROOT / "tests"), str(SKILLS), str(SKILLS / "field-ad
         sys.path.insert(0, path)
 
 import extract_fields  # noqa: E402
+from _shared.event_binding import EVENT_LEVEL_FIELD, EVENT_NAME_FIELD  # noqa: E402
 from field_adjust_helpers import make_entity, norm_entry  # noqa: E402
 
 
@@ -336,6 +337,205 @@ class ExtractFieldCoreTest(unittest.TestCase):
     def test_missing_pattern_arg_invalid_input(self):
         result = extract_fields.extract_field(
             self.data, "newclient", "original_log", ""
+        )
+        self._err(result, "invalid_input")
+
+
+class ExtractFieldGuardedTest(unittest.TestCase):
+    """extract_field_guarded() 守卫链：寻址 / 新名保留字段 / 新名事件字段。"""
+
+    def setUp(self):
+        self.pattern = r'[\S\s]*client="(.*?)"[\S\s]*'
+        self.data = [
+            make_entity(
+                "rule_threat",
+                normalize=[
+                    norm_entry("original_log", ['start client="nexus" end']),
+                    norm_entry(EVENT_NAME_FIELD, ["终端告警"]),
+                    norm_entry(EVENT_LEVEL_FIELD, ["提醒"]),
+                ],
+            ),
+            make_entity(
+                "rule_normal",
+                normalize=[
+                    norm_entry("original_log", ['start client="beta" end']),
+                    norm_entry(EVENT_NAME_FIELD, ["登录事件"]),
+                ],
+            ),
+            make_entity(
+                "rule_plain",
+                normalize=[norm_entry("original_log", ['start client="gamma" end'])],
+            ),
+        ]
+
+    def _ok(self, result):
+        self.assertEqual(result["status"], "success")
+        return result
+
+    def _err(self, result, code):
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], code)
+        return result
+
+    def test_guarded_extract_applies_to_all(self):
+        result = self._ok(
+            extract_fields.extract_field_guarded(
+                self.data, "newclient", "original_log", self.pattern
+            )
+        )
+        # original_log 三个子规则都有：全部写入提取过滤器
+        for rule in result["data"]:
+            self.assertEqual(
+                rule["parser"]["filter"][-1]["name"], "customFunction"
+            )
+        self.assertEqual(result["data"][0]["normalize"][-1]["result"], ["nexus"])
+
+    # ---- 新增字段名守卫 ----
+
+    def test_reserved_new_field_rejected(self):
+        for reserved in ("original_log", "rule_name_list", "日志类型"):
+            result = extract_fields.extract_field_guarded(
+                self.data, reserved, "original_log", self.pattern
+            )
+            self._err(result, "reserved_field_rejected")
+            self.assertIn("系统保留字段", result["message"])
+
+    def test_reserved_keyword_base_rejected(self):
+        # 缺省命名基准（关键词）撞保留字段：同样拦截
+        result = extract_fields.extract_field_guarded(
+            self.data, None, "original_log", self.pattern,
+            keyword="rule_name_list",
+        )
+        self._err(result, "reserved_field_rejected")
+
+    def test_reserved_source_tail_base_rejected(self):
+        # 缺省命名退回源字段尾段撞保留字段：同样拦截
+        data = [
+            make_entity(
+                "rule_a",
+                normalize=[norm_entry("payload.original_log", ['client="x"'])],
+            )
+        ]
+        result = extract_fields.extract_field_guarded(
+            data, None, "payload.original_log", self.pattern
+        )
+        self._err(result, "reserved_field_rejected")
+
+    def test_source_original_log_not_restricted(self):
+        # 被提取字段不受保留字段限制：「原始日志里的 X」是主用例
+        result = self._ok(
+            extract_fields.extract_field_guarded(
+                self.data, "newclient", "original_log", self.pattern
+            )
+        )
+        self.assertIn("来源: original_log", result["message"])
+
+    def test_event_name_new_field_rejected(self):
+        result = extract_fields.extract_field_guarded(
+            self.data, EVENT_NAME_FIELD, "original_log", self.pattern
+        )
+        self._err(result, "invalid_event_name")
+        self.assertIn("添加字段", result["message"])
+
+    def test_event_level_new_field_rejected(self):
+        result = extract_fields.extract_field_guarded(
+            self.data, EVENT_LEVEL_FIELD, "original_log", self.pattern
+        )
+        self._err(result, "invalid_event_name")
+
+    # ---- 寻址守卫 ----
+
+    def test_unknown_target_rejected(self):
+        result = extract_fields.extract_field_guarded(
+            self.data, "newclient", "original_log", self.pattern,
+            target_names=["rule_z"],
+        )
+        self._err(result, "rule_name_not_found")
+        self.assertIn("未找到子规则: rule_z", result["message"])
+        self.assertIn(
+            "可用子规则: rule_threat、rule_normal、rule_plain", result["message"]
+        )
+
+    def test_group_threat_selects_annotated_threat_only(self):
+        result = self._ok(
+            extract_fields.extract_field_guarded(
+                self.data, "newclient", "original_log", self.pattern,
+                group="threat",
+            )
+        )
+        self.assertIn("目标 1 个", result["message"])
+        self.assertEqual(
+            result["data"][0]["parser"]["filter"][-1]["name"], "customFunction"
+        )
+        # 非威胁组与未标注的子规则原样透传
+        self.assertIsNone(result["data"][1]["parser"]["filter"])
+        self.assertIsNone(result["data"][2]["parser"]["filter"])
+
+    def test_group_non_threat_selects_annotated_non_threat_only(self):
+        result = self._ok(
+            extract_fields.extract_field_guarded(
+                self.data, "newclient", "original_log", self.pattern,
+                group="non-threat",
+            )
+        )
+        self.assertIn("目标 1 个", result["message"])
+        self.assertEqual(
+            result["data"][1]["parser"]["filter"][-1]["name"], "customFunction"
+        )
+        self.assertIsNone(result["data"][0]["parser"]["filter"])
+
+    def test_group_without_annotation_reports_event_annotation_required(self):
+        data = [
+            make_entity(
+                "rule_a", normalize=[norm_entry("original_log", ['client="x"'])]
+            )
+        ]
+        result = extract_fields.extract_field_guarded(
+            data, "newclient", "original_log", self.pattern, group="threat"
+        )
+        self._err(result, "event_annotation_required")
+        self.assertIn("添加字段", result["message"])
+
+    def test_group_without_match_reports_rule_name_not_found(self):
+        data = [
+            make_entity(
+                "rule_normal",
+                normalize=[
+                    norm_entry("original_log", ['client="x"']),
+                    norm_entry(EVENT_NAME_FIELD, ["登录事件"]),
+                ],
+            )
+        ]
+        result = extract_fields.extract_field_guarded(
+            data, "newclient", "original_log", self.pattern, group="threat"
+        )
+        self._err(result, "rule_name_not_found")
+        self.assertIn("没有属于威胁组的子规则", result["message"])
+
+    def test_target_takes_precedence_over_group(self):
+        # target 指向威胁组规则而 group 选非威胁组：target 优先
+        result = self._ok(
+            extract_fields.extract_field_guarded(
+                self.data, "newclient", "original_log", self.pattern,
+                target_names=["rule_threat"], group="non-threat",
+            )
+        )
+        self.assertIn("目标 1 个", result["message"])
+        self.assertEqual(
+            result["data"][0]["parser"]["filter"][-1]["name"], "customFunction"
+        )
+
+    # ---- 校验透传 ----
+
+    def test_invalid_pattern_passthrough(self):
+        result = extract_fields.extract_field_guarded(
+            self.data, "newclient", "original_log", "(["
+        )
+        self._err(result, "invalid_pattern")
+
+    def test_empty_data_invalid_input(self):
+        result = extract_fields.extract_field_guarded(
+            [], "newclient", "original_log", self.pattern
         )
         self._err(result, "invalid_input")
 
