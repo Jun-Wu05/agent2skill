@@ -94,6 +94,47 @@ Base64 解码后是一个 JSON 数组，每个元素是一个 mapping entity：
 - 已有同目标的 merger 时原地更新（新源字段列表与分隔符覆盖旧值），不新建第二个
 - 源字段的 normalize 条目保留不删——merger 运行时读取源字段现场拼接
 
+## base64 解码过滤器结构
+
+base64 解码启用时写入（addFields 的一种），声明运行时对指定字段原地覆盖为解码值：
+
+```json
+{
+  "fields": {
+    "req_header": "<%@com.hansight.dataviewer.utils.Base64@Base64Decode(req_header)%>",
+    "req_body": "<%@com.hansight.dataviewer.utils.Base64@Base64Decode(req_body)%>"
+  },
+  "name": "addFields",
+  "id": ""
+}
+```
+
+- key = 原字段名，值 = 固定 OGNL 解码语句，运行时由解析器解码后**原地覆盖**该字段的值——不新增字段、normalize 不动（与添加字段的双写语义不同）
+- 识别条件：`name=addFields`、`id=""` 且**全部**值含 `Base64Decode(`——重复调用合并进该过滤器（幂等）；固定值与 OGNL 混合的 addFields 过滤器不算解码过滤器，会另建新的
+- `original_log` / `rule_name_list` / `日志类型` 与【事件名称】/【事件级别】拒绝解码
+
+## base64 解码示例 - 完整输入输出
+
+### 输入数据
+normalize:
+```json
+[
+  {"index": "req_header", "result": ["aGVsbG8="], "mappings": [], "field": null, "sim": null, "info": null, "entity": null, "required": false, "core": null, "value": null},
+  {"index": "req_body", "result": ["d29ybGQ="], "mappings": [], "field": null, "sim": null, "info": null, "entity": null, "required": false, "core": null, "value": null}
+]
+```
+
+### 解码指令
+"base64 解码 req_header 和 req_body"
+
+### 输出数据
+normalize **不变**（原地覆盖、不双写）；filter 新增：
+```json
+{"fields": {"req_header": "<%@com.hansight.dataviewer.utils.Base64@Base64Decode(req_header)%>", "req_body": "<%@com.hansight.dataviewer.utils.Base64@Base64Decode(req_body)%>"}, "name": "addFields", "id": ""}
+```
+
+再次执行「base64 解码 req_content」时合并进同一过滤器，不新建第二个。
+
 ## 合并示例 - 完整输入输出
 
 ### 输入数据
@@ -214,3 +255,4 @@ normalize 新增：
 - 删除【事件名称】或【事件级别】任一时自动扩展为删除两者（绑定对不拆散）
 - 合并目标为系统保留字段或【事件名称】/【事件级别】时被拒绝；目标字段与源字段重名（自引用）被拒绝
 - 合并的 per-entity 自适应：缺任一源或目标已存在的子规则跳过并按名报告；所有目标子规则都缺源字段时报 `field_not_found`（附字段并集预览）
+- base64 解码的 per-entity 自适应：缺任一要解码字段的子规则跳过并按名报告；所有目标子规则都缺该字段时报 `field_not_found`（只点名真正缺失的字段 + 并集预览）

@@ -1,6 +1,6 @@
 # 字段调整（field-adjust）子模块指南
 
-> parser-skills 的子模块：对解析规则（Base64 配置或映射生成的子规则）执行字段级操作——添加、删除、合并、base64 解码、正则提取。当前已实现【添加字段】（`scripts/add_fields.py`）、【删除字段】（`scripts/delete_fields.py`）与【合并字段】（`scripts/merge_fields.py`）三个子命令，其余两个按计划交付中。
+> parser-skills 的子模块：对解析规则（Base64 配置或映射生成的子规则）执行字段级操作——添加、删除、合并、base64 解码、正则提取。当前已实现【添加字段】（`scripts/add_fields.py`）、【删除字段】（`scripts/delete_fields.py`）、【合并字段】（`scripts/merge_fields.py`）与【base64 解码】（`scripts/decode_fields.py`）四个子命令，正则提取按计划交付中。
 
 ## 何时使用
 
@@ -9,6 +9,7 @@
 - 用户要求设置/修改某子规则的【事件名称】时 → add 子命令自动联动写入绑定的【事件级别】
 - 用户说「删除字段」「移除字段」「删掉某字段」时 → **delete 子命令**（支持一次删多个、按子规则名或威胁/非威胁组寻址）
 - 用户说「合并字段」「把 X 和 Y 合并成 Z」时 → **merge 子命令**（至少 2 个源字段 + 1 个合并目标字段，支持分隔符）
+- 用户说「base64 解码 X」「解码字段 X / Y」「还原 X 的明文」且 X 是**已有字段**时 → **base64-decode 子命令**（原地覆盖字段值，不新增字段）
 - **消歧边界**（不得互换）：
   - 「删除字段 X」是字段调整（移除整个字段）→ 本模块 delete 子命令
   - 「取消/删除 X 的映射」是取消映射（只清 mappings，字段保留）→ enum-mapping 子模块（未实现）
@@ -20,6 +21,7 @@
 - add：用户指定了新字段名；值来源缺省为空字符串
 - delete：用户指定了要删除的字段名（一个或多个，逗号分隔）
 - merge：用户指定了至少 2 个源字段名（逗号分隔）与合并产出的目标字段名；分隔符缺省为空字符串
+- base64-decode：用户指定了要解码的**已有字段**名（一个或多个，逗号分隔）；解码只写运行时覆盖指令，值由解析器在运行时还原
 
 ## 输入/输出契约
 
@@ -32,14 +34,14 @@
   - `config_required`：找不到配置文件
   - `invalid_config`：无法解码为 JSON 数组
   - `field_conflict`：字段已存在（除非 `--skip-existing`）
-  - `invalid_event_name`：【事件名称】非法或不支持引用型值
+  - `invalid_event_name`：【事件名称】非法或不支持引用型值；对事件绑定字段合并或解码
   - `event_level_conflict`：目标内已存在【事件级别】
   - `event_level_direct_add_rejected`：不允许单独添加【事件级别】
-  - `reserved_field_rejected`：删除系统保留字段（original_log / rule_name_list / 日志类型），或以其为合并目标
+  - `reserved_field_rejected`：删除系统保留字段（original_log / rule_name_list / 日志类型）、以其为合并目标、或对其启用 base64 解码
   - `rule_name_not_found`：`--target` 未知名，或 `--group` 组内无匹配
   - `event_annotation_required`：按威胁/非威胁分组时配置内无任何【事件名称】标注
   - `field_reference_conflict`：被删字段仍被 merger 源字段或 `%{字段}` 占位引用
-  - `field_not_found`：合并的源字段不存在于任何（目标）子规则（附字段并集预览）
+  - `field_not_found`：合并的源字段、或要解码的字段不存在于任何（目标）子规则（附字段并集预览）
   - `invalid_input`：数据为空 / 字段名为空 / 源字段少于 2 个 / 合并目标自引用
 
 ## 调用方式
@@ -177,6 +179,47 @@ per-entity 自适应：子规则字段集互不相同（映射表展示的是并
 5. **自引用拦截**：目标字段名出现在源字段列表中 → `invalid_input`（请为合并结果另取字段名）
 6. **全缺源校验**：所有目标子规则都缺某个源字段 → `field_not_found`，消息附全部子规则字段并集预览（前 30 个），帮助定位字段名笔误
 
+## base64 解码（base64-decode 子命令）
+
+脚本位于本子模块：`<parser-skills>/field-adjust/scripts/decode_fields.py`。输出契约与 add / delete / merge 一致（修改后 JSON + Base64 导出 + stdout 报告，不原地覆盖输入）。
+
+```bash
+# 基本用法（对已有字段启用运行时 base64 解码，原地覆盖其值）
+python <parser-skills>/field-adjust/scripts/decode_fields.py \
+  --input <配置文件> \
+  --fields "req_header,req_body"
+
+# 按子规则名寻址（名单外原样透传）
+python <parser-skills>/field-adjust/scripts/decode_fields.py \
+  --input config.txt --fields req_header \
+  --target "某厂_AUDIT_json_子规则,某厂_IPS_json_子规则"
+
+# 按已标注【事件名称】分组寻址（threat=威胁组 / non-threat=非威胁组）
+python <parser-skills>/field-adjust/scripts/decode_fields.py \
+  --input config.txt --fields req_header --group threat
+```
+
+`--target` 与 `--group` 并存时 **target 优先**。
+
+### 数据操作（scripts/decode_fields.py）
+
+对每个目标 entity 执行（深拷贝，不改入参）：
+
+1. **在（或新建的）解码 addFields 过滤器中写入 OGNL 覆盖指令**（filter 为 null 的入口规则先初始化空数组）：
+   `{"fields": {"<字段名>": "<%@com.hansight.dataviewer.utils.Base64@Base64Decode(<字段名>)%>"}, "name": "addFields", "id": ""}`
+2. **原地覆盖，不新增字段**：key = 原字段名，运行时由解析器解码后覆盖该字段的值；normalize **不动**（与添加字段的双写语义不同）
+3. **幂等**：重复调用合并进已有解码过滤器（识别条件：addFields 且全部值含 `Base64Decode(`），不重复追加；固定值与 OGNL 混合的 addFields 过滤器不算解码过滤器，会另建新的
+
+per-entity 自适应：子规则字段集互不相同（映射表展示的是并集），缺任一要解码字段的子规则**跳过并按名报告**，整体仍为 success；无 normalize 的 entity 跳过且计数如实报告；`--target` 名单外与 `--group` 组外的 entity 原样透传。
+
+### 解码守卫链（任一命中即拒绝，退出码 1）
+
+1. **输入校验**：数据为空 / 字段列表为空 → `invalid_input`
+2. **寻址校验**：`--target` 未知名 → `rule_name_not_found`（附可用子规则提示）；`--group` 分组时配置内无任何【事件名称】标注 → `event_annotation_required`，组内无匹配 → `rule_name_not_found`
+3. **保留字段拦截**：`original_log` / `rule_name_list` / `日志类型` → `reserved_field_rejected`（original_log 是原始日志审计锚点，运行时被覆盖会断审计链）；字段列表混合保留字段时整单拒绝
+4. **事件绑定字段拦截**：【事件名称】或【事件级别】→ `invalid_event_name`（解码会破坏 21 分类绑定，事件字段请走添加字段）
+5. **全缺字段校验**：所有目标子规则都缺某个要解码的字段 → `field_not_found`，消息只点名真正缺失的字段并附全部子规则字段并集预览（前 30 个）
+
 ## 约束与边界
 
 - add 字段名已存在且未开 `--skip-existing`：返回 `field_conflict`，建议更换名称或先删除原有字段
@@ -249,3 +292,22 @@ stdout 报告：
 ```
 
 AUDIT 子规则写入 merger 过滤器 `{"name": "merger", "field": "合并字段", "sep": "-", "id": "", "fields": ["src_ip", "original_log"]}` 并追加 normalize 预览条目（`index=合并字段`，`result` 为两源样本值用 `-` 拼接）；IPS 子规则缺 `src_ip` 如实跳过；空入口规则计数跳过。
+
+执行「base64 解码 src_ip」时：
+
+```bash
+python <parser-skills>/field-adjust/scripts/decode_fields.py \
+  --input testdata/sample_config.base64.txt --fields src_ip
+```
+
+stdout 报告：
+```json
+{
+  "status": "success",
+  "message": "成功为 1 个 entity 启用 base64 解码: src_ip；跳过：某厂_IPS_json_子规则（缺 src_ip）（跳过 1 个无 normalize 的 entity）",
+  "output": "testdata/sample_config.base64.modified.json",
+  "export": "testdata/fieldadjusted_config_20261118_1538.txt"
+}
+```
+
+AUDIT 子规则在原有 `additional_fields_filter` 之后追加解码过滤器 `{"fields": {"src_ip": "<%@com.hansight.dataviewer.utils.Base64@Base64Decode(src_ip)%>"}, "name": "addFields", "id": ""}`，normalize 保持 2 条不变（原地覆盖、不双写）；IPS 子规则缺 `src_ip` 如实跳过；空入口规则计数跳过。
