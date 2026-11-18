@@ -349,6 +349,45 @@ class CliEndToEndTest(unittest.TestCase):
         report = json.loads(stdout)
         self.assertEqual(report["code"], "field_conflict")
 
+    def test_e2e_unknown_target_reports_rule_name_not_found(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE), "--field", "主机ip", "--value", "1.1.1.1",
+            "--target", "不存在的规则",
+            "--output", str(self._tmp / "o.json"),
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "rule_name_not_found")
+        self.assertIn("可用子规则", report["message"])
+
+    def test_e2e_mixed_target_with_unknown_name_rejected(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE), "--field", "主机ip", "--value", "1.1.1.1",
+            "--target", "某厂_AUDIT_json_子规则,打错的规则",
+            "--output", str(self._tmp / "o.json"),
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "rule_name_not_found")
+        # 未失败产物不落盘
+        self.assertFalse((self._tmp / "o.json").exists())
+
+    def test_e2e_valid_target_scopes_output(self):
+        output = self._tmp / "scoped.modified.json"
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE), "--field", "主机ip", "--value", "1.1.1.1",
+            "--target", "某厂_AUDIT_json_子规则",
+            "--output", str(output), "--no-export",
+        )
+        self.assertEqual(code, 0, stdout)
+        report = json.loads(stdout)
+        self.assertEqual(report["status"], "success")
+        self.assertIn("目标 1 个", report["message"])
+        updated = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual(updated[0]["normalize"][-1]["index"], "主机ip")
+        # 名单外 entity 原样透传
+        self.assertEqual(updated[1]["normalize"][0]["index"], "dst_ip")
+
 
 if __name__ == "__main__":
     unittest.main()
