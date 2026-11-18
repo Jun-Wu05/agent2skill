@@ -426,6 +426,31 @@ class ExtractFieldGuardedTest(unittest.TestCase):
         )
         self._err(result, "reserved_field_rejected")
 
+    def test_auto_naming_keyword_reserved_but_resolved_passes(self):
+        # 关键词撞保留字段但将消解为 new 前缀名：不误拦（review 修复回归）
+        result = self._ok(
+            extract_fields.extract_field_guarded(
+                self.data, None, "original_log", self.pattern,
+                keyword="original_log",
+            )
+        )
+        self.assertEqual(
+            result["data"][0]["normalize"][-1]["index"], "neworiginal_log"
+        )
+
+    def test_source_tail_main_use_case_resolved_passes(self):
+        # 主用例调用形态：source=original_log 且不带 --field/--keyword，
+        # 消解为 neworiginal_log，守卫不得以保留字段误拦（review 修复回归）
+        result = self._ok(
+            extract_fields.extract_field_guarded(
+                self.data, None, "original_log", self.pattern
+            )
+        )
+        self.assertEqual(
+            result["data"][0]["normalize"][-1]["index"], "neworiginal_log"
+        )
+        self.assertEqual(result["data"][0]["normalize"][-1]["result"], ["nexus"])
+
     def test_source_original_log_not_restricted(self):
         # 被提取字段不受保留字段限制：「原始日志里的 X」是主用例
         result = self._ok(

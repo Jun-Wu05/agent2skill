@@ -38,7 +38,7 @@ if str(_SKILLS_ROOT) not in sys.path:
 
 from _shared import report as skill_report  # noqa: E402
 from _shared.config_io import ConfigIOError, load_entities  # noqa: E402
-from _shared.entity_scope import resolve_field_scope  # noqa: E402
+from _shared.entity_scope import entities_in_scope, resolve_field_scope  # noqa: E402
 from _shared.event_binding import EVENT_LEVEL_FIELD, EVENT_NAME_FIELD  # noqa: E402
 from _shared.field_policy import RESERVED_FIELDS  # noqa: E402
 
@@ -48,11 +48,16 @@ _OGNL_TEMPLATE = (
 )
 
 
+def _base_name(keyword: Optional[str], source_field: str) -> str:
+    """缺省命名基准：提取关键词优先，无关键词时退回源字段名尾段。"""
+    return (keyword or "").strip() or source_field.rsplit(".", 1)[-1]
+
+
 def _default_field_name(
     keyword: Optional[str], source_field: str, norm_map: dict
 ) -> str:
-    """缺省命名：提取关键词优先（冲突加 new 前缀），无关键词时退回源字段尾段。"""
-    base = (keyword or "").strip() or source_field.rsplit(".", 1)[-1]
+    """缺省命名：基准名已存在时加 new 前缀消解冲突。"""
+    base = _base_name(keyword, source_field)
     if base not in norm_map:
         return base
     return f"new{base}"
@@ -115,9 +120,7 @@ def _is_custom_function_filter(filter_item: dict) -> bool:
     )
 
 
-def _validate_extract_args(
-    data: list, new_field: Optional[str], source_field: str, pattern: str
-) -> Optional[dict]:
+def _validate_extract_args(data: list, source_field: str, pattern: str) -> Optional[dict]:
     """输入校验（extract_field 与 extract_field_guarded 共用）。"""
     if not data:
         return {"status": "error", "code": "invalid_input", "message": "输入数据为空"}
@@ -167,7 +170,7 @@ def extract_field(
     Returns:
         {"status": "success"|"error", "code"?, "data"?, "message": "..."}
     """
-    error = _validate_extract_args(data, new_field, source_field, pattern)
+    error = _validate_extract_args(data, source_field, pattern)
     if error is not None:
         return error
     compiled = re.compile(pattern)
@@ -291,7 +294,7 @@ def extract_field(
             ),
         }
 
-    display_name = resolved_name or _default_field_name(keyword, source_field, {})
+    display_name = resolved_name or _base_name(keyword, source_field)
     message = (
         f"成功为 {applied} 个 entity 添加正则提取字段 '{display_name}'"
         f"（来源: {source_field}）"
@@ -328,14 +331,15 @@ def extract_field_guarded(
        invalid_pattern；
     2. 寻址解析：target 未知名 → rule_name_not_found；group 分组无标注
        → event_annotation_required、组内无匹配 → rule_name_not_found；
-    3. 新增字段名为系统保留字段 → reserved_field_rejected（只拦新增
-       字段名——被提取字段不受限，original_log 是「原始日志里的 X」
-       主用例；缺省命名的基准名 = keyword 或源字段尾段，同样受拦，
-       冲突加 new 前缀消解后的名字不会撞保留字段）；
+    3. 新增字段名（显式传入，或缺省命名消解后的终名）为系统保留字段
+       → reserved_field_rejected（只拦新增字段名——被提取字段不受限，
+       original_log 是「原始日志里的 X」主用例；缺省命名在首个将执行
+       写入的子规则上模拟消解，基准名撞保留字段但会加 new 前缀消解
+       时不误拦）；
     4. 新增字段名为【事件名称】/【事件级别】→ invalid_event_name
        （提取值无 21 分类保证，事件字段请走添加字段）。
     """
-    error = _validate_extract_args(data, new_field, source_field, pattern)
+    error = _validate_extract_args(data, source_field, pattern)
     if error is not None:
         return error
 
@@ -343,26 +347,41 @@ def extract_field_guarded(
     if scope_error is not None:
         return scope_error
 
-    # 缺省命名基准：显式新字段名 > keyword > 源字段名尾段
-    effective_name = new_field or (
-        (keyword or "").strip() or source_field.rsplit(".", 1)[-1]
-    )
-    if effective_name in RESERVED_FIELDS:
+    # 新增字段名守卫的对象是实际写入的名字：显式传入直接查；缺省
+    # 命名先模拟首个将执行写入的子规则上的消解（new 前缀）再查终名
+    # ——基准名撞保留字段但会消解为 new 前缀名时不误拦（如
+    # source=original_log 且不带 --field/--keyword 的主用例调用形态）
+    if new_field:
+        candidate_name = new_field
+    else:
+        candidate_name = _base_name(keyword, source_field)
+        for entity in entities_in_scope(data, targets):
+            norm_indexes = {
+                item.get("index")
+                for item in entity.get("normalize") or []
+                if item.get("index")
+            }
+            if source_field in norm_indexes:
+                candidate_name = _default_field_name(
+                    keyword, source_field, norm_indexes
+                )
+                break
+    if candidate_name in RESERVED_FIELDS:
         return {
             "status": "error",
             "code": "reserved_field_rejected",
             "message": (
-                f"新增字段名 '{effective_name}' 为系统保留字段，"
+                f"新增字段名 '{candidate_name}' 为系统保留字段，"
                 "不允许作为正则提取的目标字段"
             ),
         }
 
-    if effective_name in (EVENT_NAME_FIELD, EVENT_LEVEL_FIELD):
+    if candidate_name in (EVENT_NAME_FIELD, EVENT_LEVEL_FIELD):
         return {
             "status": "error",
             "code": "invalid_event_name",
             "message": (
-                f"新增字段名 '{effective_name}' 为事件绑定字段，"
+                f"新增字段名 '{candidate_name}' 为事件绑定字段，"
                 "提取值无 21 分类保证，会破坏事件名称/事件级别绑定；"
                 "事件字段请通过添加字段设置（自动按绑定关系联动写入）"
             ),
