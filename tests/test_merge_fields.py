@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import base64
 import contextlib
 import io
 import json
@@ -336,6 +337,121 @@ class MergeFieldGuardedTest(unittest.TestCase):
         )
         self.assertIn("目标 1 个", result["message"])
         self.assertEqual(result["data"][0]["parser"]["filter"][-1]["name"], "merger")
+
+
+class CliEndToEndTest(unittest.TestCase):
+    """文件契约端到端：Base64 输入 → 修改后 JSON + 平台可导入 Base64 输出。
+
+    以进程内调用 main() + stdout 重定向实现，避免子进程管道
+    （受限环境下 EPERM），任何环境可跑；真实 CLI 演示见 SKILL.md。
+    """
+
+    FIXTURE = ROOT / "testdata" / "sample_config.json"
+
+    def setUp(self):
+        (ROOT / ".tmp_tests").mkdir(exist_ok=True)
+        self._tmp = Path(tempfile.mkdtemp(dir=str(ROOT / ".tmp_tests")))
+        self.addCleanup(self._cleanup)
+
+    def _cleanup(self):
+        import shutil
+
+        shutil.rmtree(self._tmp, ignore_errors=True)
+        tmp_root = ROOT / ".tmp_tests"
+        if tmp_root.is_dir() and not any(tmp_root.iterdir()):
+            tmp_root.rmdir()
+
+    def _run(self, *argv):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = merge_fields.main([*argv])
+        return code, buf.getvalue()
+
+    def test_e2e_merge_on_base64_input(self):
+        payload = json.loads(self.FIXTURE.read_text(encoding="utf-8"))
+        b64_file = self._tmp / "config.b64.txt"
+        b64_file.write_text(
+            base64.b64encode(
+                json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            ).decode("ascii"),
+            encoding="utf-8",
+        )
+        output = self._tmp / "out.modified.json"
+        code, stdout = self._run(
+            "--input", str(b64_file),
+            "--sources", "src_ip,original_log",
+            "--target-field", "合并字段",
+            "--sep", "-",
+            "--output", str(output),
+        )
+        self.assertEqual(code, 0, stdout)
+        report = json.loads(stdout)
+        self.assertEqual(report["status"], "success")
+        self.assertIn("成功合并 1 个 entity 的字段为 '合并字段'", report["message"])
+        # 缺 src_ip 的 IPS 子规则按名报告跳过
+        self.assertIn("某厂_IPS_json_子规则（缺 src_ip）", report["message"])
+        # 修改后 JSON：AUDIT 子规则写入 merger 与 normalize 预览条目
+        updated = json.loads(output.read_text(encoding="utf-8"))
+        merger = updated[0]["parser"]["filter"][-1]
+        self.assertEqual(merger["name"], "merger")
+        self.assertEqual(merger["field"], "合并字段")
+        self.assertEqual(merger["sep"], "-")
+        self.assertEqual(merger["fields"], ["src_ip", "original_log"])
+        preview = updated[0]["normalize"][-1]
+        self.assertEqual(preview["index"], "合并字段")
+        original_log_preview = next(
+            e["result"][0] for e in updated[0]["normalize"] if e["index"] == "original_log"
+        )
+        self.assertEqual(preview["result"], ["10.1.1.5-" + original_log_preview])
+        # 平台可导入 Base64 导出文件
+        export = Path(report["export"])
+        self.assertTrue(export.exists())
+        self.assertRegex(export.name, r"^fieldadjusted_config_\d{8}_\d{4}\.txt$")
+        decoded = json.loads(base64.b64decode(export.read_text(encoding="utf-8")))
+        self.assertEqual(decoded, updated)
+
+    def test_e2e_reserved_target_exit_code(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--sources", "src_ip,original_log",
+            "--target-field", "original_log",
+            "--output", str(self._tmp / "o.json"),
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "reserved_field_rejected")
+
+    def test_e2e_field_not_found_exit_code(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--sources", "src_ip,不存在字段",
+            "--target-field", "合并字段",
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "field_not_found")
+        self.assertIn("并集", report["message"])
+
+    def test_e2e_unknown_target_exit_code(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--sources", "src_ip,original_log",
+            "--target-field", "合并字段",
+            "--target", "不存在的规则",
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "rule_name_not_found")
+
+    def test_e2e_missing_input_reports_config_required(self):
+        code, stdout = self._run(
+            "--input", str(self._tmp / "nope.txt"),
+            "--sources", "a,b",
+            "--target-field", "c",
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "config_required")
 
 
 if __name__ == "__main__":

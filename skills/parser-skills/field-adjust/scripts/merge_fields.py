@@ -268,3 +268,94 @@ def merge_field_guarded(
         }
 
     return merge_field(data, source_fields, target_field, sep, targets)
+
+
+# ---------------------------------------------------------------------------
+# CLI（文件输入/输出契约）
+# ---------------------------------------------------------------------------
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="merge_fields.py",
+        description="把多个源字段的值合并为解析规则（mapping entities）中的新字段",
+    )
+    parser.add_argument(
+        "--input", "-i", required=True,
+        help="配置文件路径（Base64 txt / 原生 JSON / TXT，内容为 JSON 数组）",
+    )
+    parser.add_argument(
+        "--sources", required=True,
+        help="源字段名，逗号分隔，至少 2 个",
+    )
+    parser.add_argument(
+        "--target-field", required=True,
+        help="合并产出的目标字段名",
+    )
+    parser.add_argument(
+        "--sep", default="",
+        help="合并分隔符（缺省为空字符串）",
+    )
+    parser.add_argument(
+        "--output", "-o", default=None,
+        help="修改后配置 JSON 输出路径（缺省 <输入名>.modified.json）",
+    )
+    parser.add_argument(
+        "--target", default=None,
+        help="目标子规则名（按 name 精确寻址），逗号分隔；缺省全部 entity",
+    )
+    parser.add_argument(
+        "--group", default="all", choices=["all", "threat", "non-threat"],
+        help="按已标注事件名称分组寻址（threat=威胁组 / non-threat=非威胁组）；"
+             "与 --target 并存时 target 优先",
+    )
+    parser.add_argument(
+        "--no-export", action="store_true",
+        help="不产出 Base64 导出文件（缺省会一并产出）",
+    )
+    args = parser.parse_args(argv)
+
+    try:
+        data = load_entities(args.input)
+    except ConfigIOError as exc:
+        print(
+            json.dumps(
+                {"status": "error", "code": exc.code, "message": exc.message},
+                ensure_ascii=False,
+            )
+        )
+        return 1
+
+    sources = [name.strip() for name in args.sources.split(",") if name.strip()]
+    target_names = None
+    if args.target:
+        target_names = [name.strip() for name in args.target.split(",") if name.strip()]
+
+    result = merge_field_guarded(
+        data, sources, args.target_field, args.sep, target_names, args.group
+    )
+    if result.get("status") != "success":
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 1
+
+    input_path = Path(args.input)
+    output = (
+        Path(args.output)
+        if args.output
+        else input_path.with_name(input_path.stem + ".modified.json")
+    )
+    written = skill_report.write_result(
+        result["data"], output, make_export=not args.no_export
+    )
+    payload = {
+        "status": "success",
+        "message": result["message"],
+        "output": str(written["json_path"]),
+        "export": str(written["export_path"]) if written["export_path"] else None,
+    }
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
