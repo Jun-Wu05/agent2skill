@@ -6,7 +6,7 @@
 整单拒绝，不再静默全量）、守卫结果打印退出 1、write_result 落盘与
 成功 payload。各子命令通过 CliSpec 声明差异（prog / 描述 / 专属参数
 表 / 适配器 / 是否带 --group）；守卫链本体留在各子命令脚本，本模块
-不涉足领域规则。
+不涉足领域规则。子模块脚本共用本模块，禁止复制。
 """
 
 from __future__ import annotations

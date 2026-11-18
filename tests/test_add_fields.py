@@ -269,6 +269,14 @@ class TargetScopeGuardTest(unittest.TestCase):
         self.assertEqual(result["code"], "rule_name_not_found")
 
 
+    def test_event_name_path_also_validates_targets(self):
+        result = add_fields.add_field_guarded(
+            self.data, "事件名称", "终端告警", target_names=["不存在的规则"]
+        )
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "rule_name_not_found")
+
+
 class ValidateArgsGuardTest(unittest.TestCase):
     """空校验层（#13 欠账 2：对齐其余四子命令的 _validate_*_args 结构）。
 
@@ -312,13 +320,6 @@ class ValidateArgsGuardTest(unittest.TestCase):
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["code"], "invalid_input")
         self.assertIn("输入数据为空", result["message"])
-
-    def test_event_name_path_also_validates_targets(self):
-        result = add_fields.add_field_guarded(
-            self.data, "事件名称", "终端告警", target_names=["不存在的规则"]
-        )
-        self.assertEqual(result["status"], "error")
-        self.assertEqual(result["code"], "rule_name_not_found")
 
 
 class CliEndToEndTest(unittest.TestCase):
