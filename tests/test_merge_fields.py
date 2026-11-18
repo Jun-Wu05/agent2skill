@@ -188,5 +188,155 @@ class MergeFieldCoreTest(unittest.TestCase):
         self.assertEqual(result["code"], "invalid_input")
 
 
+class MergeFieldGuardedTest(unittest.TestCase):
+    """merge_field_guarded() 守卫链：寻址、保留字段、事件字段、自引用。"""
+
+    def setUp(self):
+        self.data = [
+            make_entity(
+                "rule_threat",
+                normalize=[
+                    norm_entry("a", ["1"]),
+                    norm_entry("b", ["2"]),
+                    norm_entry(EVENT_NAME_FIELD, ["终端告警"]),
+                    norm_entry(EVENT_LEVEL_FIELD, ["提醒"]),
+                ],
+            ),
+            make_entity(
+                "rule_normal",
+                normalize=[
+                    norm_entry("a", ["x"]),
+                    norm_entry("b", ["y"]),
+                    norm_entry(EVENT_NAME_FIELD, ["登录事件"]),
+                ],
+            ),
+            make_entity("rule_plain", normalize=[norm_entry("a", ["3"])]),
+        ]
+
+    def _ok(self, result):
+        self.assertEqual(result["status"], "success")
+        return result
+
+    def test_guarded_merge_applies_to_all(self):
+        result = self._ok(
+            merge_fields.merge_field_guarded(self.data, ["a", "b"], "c", "-")
+        )
+        for rule in result["data"][:2]:
+            self.assertEqual(rule["parser"]["filter"][-1]["name"], "merger")
+        # rule_plain 缺 b，跳过并报告
+        self.assertIn("rule_plain（缺 b）", result["message"])
+
+    def test_reserved_target_rejected(self):
+        for reserved in ("original_log", "rule_name_list", "日志类型"):
+            result = merge_fields.merge_field_guarded(self.data, ["a", "b"], reserved)
+            self.assertEqual(result["status"], "error")
+            self.assertEqual(result["code"], "reserved_field_rejected")
+            self.assertIn("系统保留字段", result["message"])
+
+    def test_event_name_target_rejected(self):
+        result = merge_fields.merge_field_guarded(self.data, ["a", "b"], EVENT_NAME_FIELD)
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_event_name")
+        self.assertIn("添加字段", result["message"])
+
+    def test_event_level_target_rejected(self):
+        result = merge_fields.merge_field_guarded(self.data, ["a", "b"], EVENT_LEVEL_FIELD)
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_event_name")
+        self.assertIn("添加字段", result["message"])
+
+    def test_self_reference_rejected(self):
+        result = merge_fields.merge_field_guarded(self.data, ["a", "b"], "a")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+        self.assertIn("自引用", result["message"])
+
+    def test_empty_data_invalid_input(self):
+        result = merge_fields.merge_field_guarded([], ["a", "b"], "c")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+
+    def test_fewer_than_two_sources_invalid_input(self):
+        result = merge_fields.merge_field_guarded(self.data, ["a"], "c")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+
+    def test_empty_sources_invalid_input(self):
+        result = merge_fields.merge_field_guarded(self.data, [], "c")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+
+    def test_empty_target_field_invalid_input(self):
+        result = merge_fields.merge_field_guarded(self.data, ["a", "b"], "")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+
+    def test_unknown_target_rejected(self):
+        result = merge_fields.merge_field_guarded(
+            self.data, ["a", "b"], "c", target_names=["rule_z"]
+        )
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "rule_name_not_found")
+        self.assertIn("未找到子规则: rule_z", result["message"])
+        self.assertIn(
+            "可用子规则: rule_threat、rule_normal、rule_plain", result["message"]
+        )
+
+    def test_group_threat_selects_annotated_threat_only(self):
+        result = self._ok(
+            merge_fields.merge_field_guarded(
+                self.data, ["a", "b"], "c", group="threat"
+            )
+        )
+        self.assertIn("目标 1 个", result["message"])
+        # 威胁组 rule_threat 合并，未标注的 rule_plain 原样透传
+        self.assertEqual(result["data"][0]["parser"]["filter"][-1]["name"], "merger")
+        self.assertEqual(result["data"][2]["parser"]["filter"], None)
+
+    def test_group_non_threat_selects_annotated_non_threat_only(self):
+        result = self._ok(
+            merge_fields.merge_field_guarded(
+                self.data, ["a", "b"], "c", group="non-threat"
+            )
+        )
+        self.assertIn("目标 1 个", result["message"])
+        self.assertEqual(result["data"][1]["parser"]["filter"][-1]["name"], "merger")
+        self.assertEqual(result["data"][0]["parser"]["filter"], None)
+
+    def test_group_without_annotation_reports_event_annotation_required(self):
+        data = [make_entity("rule_a", normalize=[norm_entry("a", ["1"]), norm_entry("b", ["2"])])]
+        result = merge_fields.merge_field_guarded(data, ["a", "b"], "c", group="threat")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "event_annotation_required")
+        self.assertIn("添加字段", result["message"])
+
+    def test_group_without_match_reports_rule_name_not_found(self):
+        data = [
+            make_entity(
+                "rule_normal",
+                normalize=[
+                    norm_entry("a", ["1"]),
+                    norm_entry("b", ["2"]),
+                    norm_entry(EVENT_NAME_FIELD, ["登录事件"]),
+                ],
+            )
+        ]
+        result = merge_fields.merge_field_guarded(data, ["a", "b"], "c", group="threat")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "rule_name_not_found")
+        self.assertIn("没有属于威胁组的子规则", result["message"])
+
+    def test_target_takes_precedence_over_group(self):
+        # target 指向威胁组规则而 group 选非威胁组：target 优先
+        result = self._ok(
+            merge_fields.merge_field_guarded(
+                self.data, ["a", "b"], "c", target_names=["rule_threat"],
+                group="non-threat",
+            )
+        )
+        self.assertIn("目标 1 个", result["message"])
+        self.assertEqual(result["data"][0]["parser"]["filter"][-1]["name"], "merger")
+
+
 if __name__ == "__main__":
     unittest.main()

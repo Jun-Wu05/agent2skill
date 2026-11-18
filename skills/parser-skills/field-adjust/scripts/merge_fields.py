@@ -31,13 +31,9 @@ if str(_SKILLS_ROOT) not in sys.path:
 
 from _shared import report as skill_report  # noqa: E402
 from _shared.config_io import ConfigIOError, load_entities  # noqa: E402
-from _shared.entity_scope import entities_in_scope  # noqa: E402
-from _shared.event_binding import (  # noqa: E402
-    EVENT_LEVEL_FIELD,
-    EVENT_NAME_FIELD,
-    THREAT_EVENT_NAMES,
-    read_entity_event_name,
-)
+from _shared.entity_scope import resolve_field_scope  # noqa: E402
+from _shared.event_binding import EVENT_LEVEL_FIELD, EVENT_NAME_FIELD  # noqa: E402
+from _shared.field_policy import RESERVED_FIELDS  # noqa: E402
 
 
 def merge_field(
@@ -201,3 +197,74 @@ def merge_field(
     if skipped_empty:
         message += f"（跳过 {skipped_empty} 个无 normalize 的 entity）"
     return {"status": "success", "data": results, "message": message}
+
+
+# ---------------------------------------------------------------------------
+# 合并守卫链（寻址 / 保留字段 / 事件绑定字段 / 自引用）
+# ---------------------------------------------------------------------------
+
+
+def merge_field_guarded(
+    data: list,
+    source_fields: List[str],
+    target_field: str,
+    sep: str = "",
+    target_names: Optional[List[str]] = None,
+    group: str = "all",
+) -> dict:
+    """带守卫链的字段合并。
+
+    守卫顺序（任一命中即拒绝，稳定错误码）：
+    1. data / 源字段 / 目标字段名空校验与源字段数下限 → invalid_input；
+    2. 寻址解析：target 未知名 → rule_name_not_found；group 分组
+       无标注 → event_annotation_required、组内无匹配 → rule_name_not_found；
+    3. 目标字段为系统保留字段 → reserved_field_rejected；
+    4. 目标字段为【事件名称】/【事件级别】→ invalid_event_name
+       （事件字段请走添加字段，自动联动绑定对）；
+    5. 自引用（目标字段 ∈ 源字段）→ invalid_input。
+    """
+    if not data:
+        return {"status": "error", "code": "invalid_input", "message": "输入数据为空"}
+    if not source_fields:
+        return {"status": "error", "code": "invalid_input", "message": "未指定源字段"}
+    if len(source_fields) < 2:
+        return {
+            "status": "error",
+            "code": "invalid_input",
+            "message": "至少需要 2 个源字段",
+        }
+    if not target_field:
+        return {"status": "error", "code": "invalid_input", "message": "目标字段名不能为空"}
+
+    targets, scope_error = resolve_field_scope(data, target_names, group)
+    if scope_error is not None:
+        return scope_error
+
+    if target_field in RESERVED_FIELDS:
+        return {
+            "status": "error",
+            "code": "reserved_field_rejected",
+            "message": f"目标字段 '{target_field}' 为系统保留字段，不允许作为合并目标",
+        }
+
+    if target_field in (EVENT_NAME_FIELD, EVENT_LEVEL_FIELD):
+        return {
+            "status": "error",
+            "code": "invalid_event_name",
+            "message": (
+                f"目标字段 '{target_field}' 为事件绑定字段；事件名称/事件级别"
+                "请通过添加字段设置（自动按绑定关系联动写入）"
+            ),
+        }
+
+    if target_field in source_fields:
+        return {
+            "status": "error",
+            "code": "invalid_input",
+            "message": (
+                f"目标字段 '{target_field}' 与源字段重名（自引用），"
+                "请为合并结果另取字段名"
+            ),
+        }
+
+    return merge_field(data, source_fields, target_field, sep, targets)
