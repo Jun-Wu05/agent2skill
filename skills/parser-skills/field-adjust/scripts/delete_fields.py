@@ -18,12 +18,20 @@ from __future__ import annotations
 
 import copy
 import sys
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Iterable, List, Literal, Mapping, Optional
 
 _SKILLS_ROOT = Path(__file__).resolve().parents[2]
 if str(_SKILLS_ROOT) not in sys.path:
     sys.path.insert(0, str(_SKILLS_ROOT))
+
+from _shared.event_binding import (  # noqa: E402
+    EVENT_LEVEL_FIELD,
+    EVENT_NAME_FIELD,
+    THREAT_EVENT_NAMES,
+    read_entity_event_name,
+)
 
 
 # 系统保留字段，不允许删除：
@@ -176,4 +184,208 @@ def delete_field(
         "data": results,
         "message": message,
         "not_found": not_found if not_found else None,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 删除守卫链（寻址 / 保留字段 / 绑定对联动 / 悬空引用）
+# ---------------------------------------------------------------------------
+
+ReferenceKind = Literal["merger", "placeholder"]
+
+
+@dataclass(frozen=True, slots=True)
+class DanglingFieldReference:
+    """删除后会失效的字段引用。"""
+
+    entity_name: str
+    kind: ReferenceKind
+    fields: tuple[str, ...]
+
+
+def find_dangling_references(
+    entities: Iterable[Mapping[str, Any]],
+    deleted_names: Iterable[str],
+) -> tuple[DanglingFieldReference, ...]:
+    """找出 merger 源字段与 ``%{字段}`` 占位中对被删字段的引用。"""
+    deleted = set(deleted_names)
+    conflicts: list[DanglingFieldReference] = []
+    for entity in entities:
+        name = entity.get("name") or "<未命名>"
+        parser = entity.get("parser") or {}
+        for filter_item in parser.get("filter") or []:
+            if not isinstance(filter_item, dict):
+                continue
+            if filter_item.get("name") == "merger":
+                overlap = tuple(sorted(deleted & set(filter_item.get("fields") or [])))
+                if overlap:
+                    conflicts.append(DanglingFieldReference(str(name), "merger", overlap))
+            fields = filter_item.get("fields")
+            if isinstance(fields, dict):
+                for value in fields.values():
+                    if not isinstance(value, str):
+                        continue
+                    references = tuple(
+                        sorted(field for field in deleted if f"%{{{field}}}" in value)
+                    )
+                    if references:
+                        conflicts.append(
+                            DanglingFieldReference(
+                                str(name), "placeholder", (references[0],)
+                            )
+                        )
+    return tuple(conflicts)
+
+
+def _entities_in_scope(data: list, target_names: Optional[List[str]]):
+    targets = set(target_names) if target_names else None
+    for entity in data:
+        if targets is None or entity.get("name") in targets:
+            yield entity
+
+
+def _resolve_field_scope(
+    data: list,
+    target_names: Optional[List[str]],
+    group: str,
+) -> tuple[Optional[List[str]], Optional[dict]]:
+    """把 target / group 解析为目标名单。
+
+    - target 非空：逐名校验存在性，未知名返回 rule_name_not_found；
+      与 group 并存时 target 优先。
+    - group 非 all：按已标注【事件名称】+ 绑定表确定性分组；
+      无任何标注返回 event_annotation_required；组内无匹配返回
+      rule_name_not_found。
+    - 其余：None 表示全部 entity。
+    """
+    if target_names:
+        available = [
+            entity.get("name")
+            for entity in data
+            if isinstance(entity, dict)
+            and isinstance(entity.get("name"), str)
+            and entity.get("name")
+        ]
+        available_set = set(available)
+        unknown = [name for name in target_names if name not in available_set]
+        if unknown:
+            preview = "、".join(available[:20]) + ("等" if len(available) > 20 else "")
+            return None, {
+                "status": "error",
+                "code": "rule_name_not_found",
+                "message": f"未找到子规则: {'、'.join(unknown)}。可用子规则: {preview}",
+            }
+        return list(target_names), None
+
+    if group != "all":
+        wanted_threat = group == "threat"
+        targets = []
+        annotated = False
+        for entity in data:
+            event_name = read_entity_event_name(entity)
+            if event_name is None:
+                continue
+            annotated = True
+            if (event_name in THREAT_EVENT_NAMES) == wanted_threat:
+                name = entity.get("name")
+                if isinstance(name, str) and name:
+                    targets.append(name)
+        if not annotated:
+            return None, {
+                "status": "error",
+                "code": "event_annotation_required",
+                "message": (
+                    "没有已标注【事件名称】的子规则，无法按威胁/非威胁分组；"
+                    "可先用添加字段为子规则标注【事件名称】后再试"
+                ),
+            }
+        if not targets:
+            return None, {
+                "status": "error",
+                "code": "rule_name_not_found",
+                "message": f"没有属于{'威胁' if wanted_threat else '非威胁'}组的子规则",
+            }
+        return targets, None
+
+    return None, None
+
+
+def _with_error_code(result: dict) -> dict:
+    """给 delete_field 的错误结果补稳定错误码。"""
+    if result.get("status") == "error":
+        message = str(result.get("message", ""))
+        code = "reserved_field_rejected" if "保留字段" in message else "invalid_input"
+        result = dict(result)
+        result.setdefault("code", code)
+    return result
+
+
+def delete_field_guarded(
+    data: list,
+    fields: List[str],
+    target_names: Optional[List[str]] = None,
+    group: str = "all",
+) -> dict:
+    """带守卫链的字段删除。
+
+    守卫顺序（任一命中即拒绝，稳定错误码）：
+    1. data / fields 空校验 → invalid_input；
+    2. 寻址解析：target 未知名 → rule_name_not_found；group 分组
+       无标注 → event_annotation_required、组内无匹配 → rule_name_not_found；
+    3. 保留字段拦截 → reserved_field_rejected；
+    4. 删【事件名称】或【事件级别】任一时自动扩展为两者，避免留下
+       绑定残缺；
+    5. 悬空引用守卫（仅查目标范围内 entity）：merger 源字段引用或
+       %{字段} 占位引用 → field_reference_conflict。
+    """
+    if not data:
+        return {"status": "error", "code": "invalid_input", "message": "输入数据为空"}
+    if not fields:
+        return {"status": "error", "code": "invalid_input", "message": "未指定要删除的字段"}
+
+    targets, scope_error = _resolve_field_scope(data, target_names, group)
+    if scope_error is not None:
+        return scope_error
+
+    reserved_hit = [name for name in fields if name in RESERVED_FIELDS]
+    if reserved_hit:
+        return {
+            "status": "error",
+            "code": "reserved_field_rejected",
+            "message": f"字段 {reserved_hit} 为系统保留字段，不允许删除",
+        }
+
+    effective_fields = list(fields)
+    pair_note = ""
+    if any(name in (EVENT_NAME_FIELD, EVENT_LEVEL_FIELD) for name in effective_fields):
+        for pair_name in (EVENT_NAME_FIELD, EVENT_LEVEL_FIELD):
+            if pair_name not in effective_fields:
+                effective_fields.append(pair_name)
+        pair_note = "；已联动删除绑定对（事件名称+事件级别）"
+
+    issues = []
+    for conflict in find_dangling_references(
+        _entities_in_scope(data, targets), effective_fields
+    ):
+        if conflict.kind == "merger":
+            issues.append(
+                f"{conflict.entity_name}: merger 源字段引用 {list(conflict.fields)}"
+            )
+        else:
+            issues.append(f"{conflict.entity_name}: %{{{conflict.fields[0]}}} 引用")
+    if issues:
+        return {
+            "status": "error",
+            "code": "field_reference_conflict",
+            "message": "以下引用了被删字段，请先解除引用再删除：" + "；".join(issues[:5]),
+        }
+
+    result = delete_field(data, effective_fields, targets)
+    if result.get("status") != "success":
+        return _with_error_code(result)
+    return {
+        "status": "success",
+        "data": result["data"],
+        "message": str(result.get("message", "")) + pair_note,
+        "not_found": result.get("not_found"),
     }
