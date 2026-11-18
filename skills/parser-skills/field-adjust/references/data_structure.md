@@ -76,6 +76,51 @@ Base64 解码后是一个 JSON 数组，每个元素是一个 mapping entity：
 
 已有 removeFields 过滤器时合并（去重追加），不新建第二个。
 
+## merger 过滤器结构
+
+合并字段时写入，声明运行时把多个源字段的值按分隔符拼接为新字段：
+
+```json
+{
+  "name": "merger",
+  "field": "合并字段",
+  "sep": "-",
+  "id": "",
+  "fields": ["源字段A", "源字段B"]
+}
+```
+
+- `field`：合并产出的目标字段名；`fields`：源字段列表（运行时按 `sep` 拼接源字段值）
+- 已有同目标的 merger 时原地更新（新源字段列表与分隔符覆盖旧值），不新建第二个
+- 源字段的 normalize 条目保留不删——merger 运行时读取源字段现场拼接
+
+## 合并示例 - 完整输入输出
+
+### 输入数据
+normalize:
+```json
+[
+  {"index": "a", "result": ["1"], "mappings": [], "field": null, "sim": null, "info": null, "entity": null, "required": false, "core": null, "value": null},
+  {"index": "b", "result": ["2"], "mappings": [], "field": null, "sim": null, "info": null, "entity": null, "required": false, "core": null, "value": null}
+]
+```
+
+### 合并指令
+"把 a 和 b 用 - 合并成 c"
+
+### 输出数据
+normalize 追加预览条目（result 为源字段样本值按序拼接）：
+```json
+{"index": "c", "result": ["1-2"], "mappings": [], "field": null, "sim": null, "info": null, "entity": null, "required": false, "core": null, "value": null}
+```
+
+filter 新增：
+```json
+{"name": "merger", "field": "c", "sep": "-", "id": "", "fields": ["a", "b"]}
+```
+
+源字段 a、b 的条目原样保留。
+
 ## 删除示例 - 完整输入输出
 
 ### 输入数据
@@ -167,3 +212,5 @@ normalize 新增：
 - addFields filter 数组中第一个元素通常是系统保留的 `additional_fields_filter`（id 为 "additional_fields_filter"），用户新增的 addFields 追加在其后
 - 删除只处理目标 entity；`original_log` / `rule_name_list` / `日志类型` 为系统保留字段，删除被拒绝
 - 删除【事件名称】或【事件级别】任一时自动扩展为删除两者（绑定对不拆散）
+- 合并目标为系统保留字段或【事件名称】/【事件级别】时被拒绝；目标字段与源字段重名（自引用）被拒绝
+- 合并的 per-entity 自适应：缺任一源或目标已存在的子规则跳过并按名报告；所有目标子规则都缺源字段时报 `field_not_found`（附字段并集预览）
