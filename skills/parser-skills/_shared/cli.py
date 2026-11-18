@@ -31,8 +31,10 @@ Argument = Tuple[Tuple[str, ...], dict]
 class CliSpec:
     """子命令差异声明：骨架之外的一切。
 
-    arguments 里的专属参数先注册，公共参数由骨架统一追加在后，
-    与五子命令原有 --help 输出顺序一致。
+    参数注册顺序：--input → arguments 专属参数 → 公共参数（--output /
+    --target / --group / --no-export）。与重构前相比，仅 add 的
+    --skip-existing 从 --target 之后移入专属参数区，其余四命令
+    --help 顺序不变。
     """
 
     prog: str
@@ -55,12 +57,12 @@ def parse_csv(value: Optional[str]) -> Optional[List[str]]:
 
 def _build_parser(spec: CliSpec) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog=spec.prog, description=spec.description)
-    for flags, kwargs in spec.arguments:
-        parser.add_argument(*flags, **kwargs)
     parser.add_argument(
         "--input", "-i", required=True,
         help="配置文件路径（Base64 txt / 原生 JSON / TXT，内容为 JSON 数组）",
     )
+    for flags, kwargs in spec.arguments:
+        parser.add_argument(*flags, **kwargs)
     parser.add_argument(
         "--output", "-o", default=None,
         help="修改后配置 JSON 输出路径（缺省 <输入名>.modified.json）",

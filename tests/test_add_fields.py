@@ -321,6 +321,21 @@ class ValidateArgsGuardTest(unittest.TestCase):
         self.assertEqual(result["code"], "invalid_input")
         self.assertIn("输入数据为空", result["message"])
 
+    def test_empty_data_precedes_event_level_direct_add_guard(self):
+        # 「空数据+直接添加事件级别」原报 event_level_direct_add_rejected，
+        # 空校验层置最前后归位 invalid_input（#13 票面补记）
+        result = add_fields.add_field_guarded([], "事件级别", "提醒")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+        self.assertIn("输入数据为空", result["message"])
+
+    def test_empty_data_precedes_reference_event_name_guard(self):
+        # 「空数据+引用型事件名称」原报 invalid_event_name，同上归位
+        result = add_fields.add_field_guarded([], "事件名称", "%{src_ip}")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+        self.assertIn("输入数据为空", result["message"])
+
 
 class CliEndToEndTest(unittest.TestCase):
     """文件契约端到端：Base64 输入 → 修改后 JSON + 平台可导入 Base64 输出。
