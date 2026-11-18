@@ -2,12 +2,17 @@
 
 覆盖 extract_field 核心行为（customFunction + normalize 双写、全匹配样本
 校验、缺省命名链、幂等覆盖、per-entity 自适应）、提取守卫链与文件契约
-端到端。切片1：纯函数核心行为。
+端到端。
 """
 
 from __future__ import annotations
 
+import base64
+import contextlib
+import io
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -538,6 +543,220 @@ class ExtractFieldGuardedTest(unittest.TestCase):
             [], "newclient", "original_log", self.pattern
         )
         self._err(result, "invalid_input")
+
+
+class CliEndToEndTest(unittest.TestCase):
+    """文件契约端到端：Base64 输入 → 修改后 JSON + 平台可导入 Base64 输出。
+
+    以进程内调用 main() + stdout 重定向实现，避免子进程管道
+    （受限环境下 EPERM），任何环境可跑；真实 CLI 演示见 SKILL.md。
+    """
+
+    FIXTURE = ROOT / "testdata" / "sample_config.json"
+
+    def setUp(self):
+        (ROOT / ".tmp_tests").mkdir(exist_ok=True)
+        self._tmp = Path(tempfile.mkdtemp(dir=str(ROOT / ".tmp_tests")))
+        self.addCleanup(self._cleanup)
+
+    def _cleanup(self):
+        import shutil
+
+        shutil.rmtree(self._tmp, ignore_errors=True)
+        tmp_root = ROOT / ".tmp_tests"
+        if tmp_root.is_dir() and not any(tmp_root.iterdir()):
+            tmp_root.rmdir()
+
+    def _run(self, *argv):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = extract_fields.main([*argv])
+        return code, buf.getvalue()
+
+    def _b64_copy(self) -> Path:
+        payload = json.loads(self.FIXTURE.read_text(encoding="utf-8"))
+        b64_file = self._tmp / "config.b64.txt"
+        b64_file.write_text(
+            base64.b64encode(
+                json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            ).decode("ascii"),
+            encoding="utf-8",
+        )
+        return b64_file
+
+    def test_e2e_extract_on_base64_input(self):
+        b64_file = self._b64_copy()
+        output = self._tmp / "out.modified.json"
+        code, stdout = self._run(
+            "--input", str(b64_file),
+            "--source-field", "original_log",
+            "--pattern", r'[\S\s]*"user":"(.*?)"[\S\s]*',
+            "--field", "提取用户",
+            "--target", "某厂_AUDIT_json_子规则",
+            "--output", str(output),
+        )
+        self.assertEqual(code, 0, stdout)
+        report = json.loads(stdout)
+        self.assertEqual(report["status"], "success")
+        self.assertIn(
+            "成功为 1 个 entity 添加正则提取字段 '提取用户'（来源: original_log）",
+            report["message"],
+        )
+        self.assertIn("目标 1 个", report["message"])
+        # 修改后 JSON：AUDIT 子规则追加 customFunction 过滤器（原有
+        # additional_fields_filter 原样保留），normalize 双写预览条目
+        updated = json.loads(output.read_text(encoding="utf-8"))
+        filters = updated[0]["parser"]["filter"]
+        self.assertEqual(len(filters), 2)
+        self.assertEqual(filters[0]["id"], "additional_fields_filter")
+        custom_filter = filters[1]
+        self.assertEqual(custom_filter["name"], "customFunction")
+        self.assertEqual(custom_filter["id"], "")
+        self.assertEqual(
+            custom_filter["fields"],
+            [function_item("提取用户", "original_log", r'[\S\s]*"user":"(.*?)"[\S\s]*')],
+        )
+        self.assertEqual(
+            updated[0]["normalize"][-1], expected_norm_entry("提取用户", "admin")
+        )
+        # 名单外子规则原样透传
+        self.assertIsNone(updated[1]["parser"]["filter"])
+        # 平台可导入 Base64 导出文件
+        export = Path(report["export"])
+        self.assertTrue(export.exists())
+        self.assertRegex(export.name, r"^fieldadjusted_config_\d{8}_\d{4}\.txt$")
+        decoded = json.loads(base64.b64decode(export.read_text(encoding="utf-8")))
+        self.assertEqual(decoded, updated)
+
+    def test_e2e_auto_naming_from_keyword(self):
+        output = self._tmp / "out.modified.json"
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--source-field", "original_log",
+            "--pattern", r'[\S\s]*"user":"(.*?)"[\S\s]*',
+            "--keyword", "user",
+            "--target", "某厂_AUDIT_json_子规则",
+            "--output", str(output),
+        )
+        self.assertEqual(code, 0, stdout)
+        updated = json.loads(output.read_text(encoding="utf-8"))
+        # 缺省命名：关键词 user 不与已有字段冲突 → 直接命名 user
+        self.assertEqual(
+            updated[0]["normalize"][-1], expected_norm_entry("user", "admin")
+        )
+
+    def test_e2e_default_output_path(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--source-field", "original_log",
+            "--pattern", r'[\S\s]*"user":"(.*?)"[\S\s]*',
+            "--field", "提取用户",
+            "--target", "某厂_AUDIT_json_子规则",
+        )
+        self.assertEqual(code, 0, stdout)
+        report = json.loads(stdout)
+        # 缺省输出路径 = <输入名>.modified.json，与输入同目录
+        self.assertEqual(
+            report["output"],
+            str(self.FIXTURE.with_name(self.FIXTURE.stem + ".modified.json")),
+        )
+        default_output = Path(report["output"])
+        self.addCleanup(lambda: default_output.unlink(missing_ok=True))
+        self.assertTrue(default_output.exists())
+        # 导出文件也落在输入同目录，测试后清理
+        export = Path(report["export"])
+        self.addCleanup(lambda: export.unlink(missing_ok=True))
+        self.assertEqual(export.parent, self.FIXTURE.parent)
+
+    def test_e2e_pattern_mismatch_exit_code(self):
+        # 正则无法全匹配 IPS 子规则的样本（缺 "user" 键）→ 整体拒绝
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--source-field", "original_log",
+            "--pattern", r'[\S\s]*"user":"(.*?)"[\S\s]*',
+            "--field", "提取用户",
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "pattern_mismatch")
+        self.assertIn("无法全匹配", report["message"])
+
+    def test_e2e_invalid_pattern_exit_code(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--source-field", "original_log",
+            "--pattern", "([",
+            "--field", "提取用户",
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "invalid_pattern")
+
+    def test_e2e_field_conflict_exit_code(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--source-field", "original_log",
+            "--pattern", r'[\S\s]*',
+            "--field", "src_ip",
+            "--target", "某厂_AUDIT_json_子规则",
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "field_conflict")
+        self.assertIn("已存在", report["message"])
+
+    def test_e2e_missing_source_field_not_found(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--source-field", "不存在字段",
+            "--pattern", r"[\S\s]*",
+            "--field", "提取结果",
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "field_not_found")
+        self.assertIn("并集", report["message"])
+
+    def test_e2e_reserved_new_field_exit_code(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--source-field", "original_log",
+            "--pattern", r'[\S\s]*',
+            "--field", "original_log",
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "reserved_field_rejected")
+
+    def test_e2e_missing_input_reports_config_required(self):
+        code, stdout = self._run(
+            "--input", str(self._tmp / "nope.txt"),
+            "--source-field", "original_log",
+            "--pattern", r"[\S\s]*",
+            "--field", "提取结果",
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "config_required")
+
+    def test_e2e_no_export_flag(self):
+        output = self._tmp / "out.modified.json"
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--source-field", "original_log",
+            "--pattern", r'[\S\s]*"user":"(.*?)"[\S\s]*',
+            "--field", "提取用户",
+            "--target", "某厂_AUDIT_json_子规则",
+            "--output", str(output),
+            "--no-export",
+        )
+        self.assertEqual(code, 0, stdout)
+        report = json.loads(stdout)
+        self.assertIsNone(report["export"])
+        # 只有修改后 JSON 落盘
+        self.assertTrue(output.exists())
+        exports = list(self._tmp.glob("fieldadjusted_config_*.txt"))
+        self.assertEqual(exports, [])
 
 
 if __name__ == "__main__":

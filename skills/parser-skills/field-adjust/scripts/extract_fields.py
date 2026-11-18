@@ -1,18 +1,32 @@
 """正则提取字段 - 从解析规则的已有字段中按正则提取新字段。
 
-field-adjust 技能的 regex-extract 子命令核心：对每个目标 entity 双写
-``parser.filter`` 的 customFunction 过滤器（functionName=extractRegexField，
-args 三元组 = 新增字段 / 被提取字段 / 正则）与 normalize 末尾的新字段
-预览条目（预览值取第一个捕获组，无捕获组取整条匹配）。
+field-adjust 技能的 regex-extract 子命令：文件输入/输出契约，无 session、
+无外部依赖；对每个目标 entity 双写 ``parser.filter`` 的 customFunction
+过滤器（functionName=extractRegexField，args 三元组 = 新增字段 / 被提取
+字段 / 正则）与 normalize 末尾的新字段预览条目（预览值取第一个捕获组，
+无捕获组取整条匹配）。
 
 正则表达式由宿主 agent 按样本生成后传入；脚本只做确定性校验：必须可
 编译（否则 invalid_pattern），有样本时必须 ``re.fullmatch`` 全匹配整条
 样本（非全匹配不生效，整体拒绝 pattern_mismatch）。
+
+CLI 用法:
+    python extract_fields.py --input <配置文件> --source-field original_log
+                            --pattern '<正则>' [--field 新字段]
+                            [--keyword 关键词]
+                            [--target 规则A,规则B]
+                            [--group {all,threat,non-threat}]
+                            [--output <输出.json>] [--no-export]
+
+输入支持: Base64 txt / 原生 JSON / TXT（须为 JSON 数组）
+输出: 修改后配置 JSON + 平台可导入的 Base64 文件（fieldadjusted_config_YYYYMMDD_HHMM.txt）
 """
 
 from __future__ import annotations
 
+import argparse
 import copy
+import json
 import re
 import sys
 from pathlib import Path
@@ -22,6 +36,8 @@ _SKILLS_ROOT = Path(__file__).resolve().parents[2]
 if str(_SKILLS_ROOT) not in sys.path:
     sys.path.insert(0, str(_SKILLS_ROOT))
 
+from _shared import report as skill_report  # noqa: E402
+from _shared.config_io import ConfigIOError, load_entities  # noqa: E402
 from _shared.entity_scope import resolve_field_scope  # noqa: E402
 from _shared.event_binding import EVENT_LEVEL_FIELD, EVENT_NAME_FIELD  # noqa: E402
 from _shared.field_policy import RESERVED_FIELDS  # noqa: E402
@@ -360,3 +376,106 @@ def extract_field_guarded(
         keyword=keyword,
         target_names=targets,
     )
+
+
+# ---------------------------------------------------------------------------
+# CLI（文件输入/输出契约）
+# ---------------------------------------------------------------------------
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    """CLI 入口：文件契约包装（读配置 → 守卫链 → 双写 → 落盘报告）。"""
+    parser = argparse.ArgumentParser(
+        prog="extract_fields.py",
+        description="从解析规则（mapping entities）的已有字段中按正则提取新字段",
+    )
+    parser.add_argument(
+        "--input", "-i", required=True,
+        help="配置文件路径（Base64 txt / 原生 JSON / TXT，内容为 JSON 数组）",
+    )
+    parser.add_argument(
+        "--source-field", "-s", required=True,
+        help="被提取字段名（须为已有字段，如 original_log / req_header）",
+    )
+    parser.add_argument(
+        "--pattern", "-p", required=True,
+        help="正则表达式（由 agent 按样本生成；必须全匹配样本整条才生效）",
+    )
+    parser.add_argument(
+        "--field", default=None,
+        help="新字段名；缺省按 --keyword 命名（冲突加 new 前缀），"
+             "再退回源字段名尾段",
+    )
+    parser.add_argument(
+        "--keyword", default=None,
+        help="提取目标关键词（如 client、Referer），缺省命名用",
+    )
+    parser.add_argument(
+        "--output", "-o", default=None,
+        help="修改后配置 JSON 输出路径（缺省 <输入名>.modified.json）",
+    )
+    parser.add_argument(
+        "--target", default=None,
+        help="目标子规则名（按 name 精确寻址），逗号分隔；缺省全部 entity",
+    )
+    parser.add_argument(
+        "--group", default="all", choices=["all", "threat", "non-threat"],
+        help="按已标注事件名称分组寻址（threat=威胁组 / non-threat=非威胁组）；"
+             "与 --target 并存时 target 优先",
+    )
+    parser.add_argument(
+        "--no-export", action="store_true",
+        help="不产出 Base64 导出文件（缺省会一并产出）",
+    )
+    args = parser.parse_args(argv)
+
+    try:
+        data = load_entities(args.input)
+    except ConfigIOError as exc:
+        print(
+            json.dumps(
+                {"status": "error", "code": exc.code, "message": exc.message},
+                ensure_ascii=False,
+            )
+        )
+        return 1
+
+    new_field = args.field or None  # 空串归一为 None（触发缺省命名链）
+    target_names = None
+    if args.target:
+        target_names = [name.strip() for name in args.target.split(",") if name.strip()]
+
+    result = extract_field_guarded(
+        data,
+        new_field,
+        args.source_field,
+        args.pattern,
+        keyword=args.keyword,
+        target_names=target_names,
+        group=args.group,
+    )
+    if result.get("status") != "success":
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 1
+
+    input_path = Path(args.input)
+    output = (
+        Path(args.output)
+        if args.output
+        else input_path.with_name(input_path.stem + ".modified.json")
+    )
+    written = skill_report.write_result(
+        result["data"], output, make_export=not args.no_export
+    )
+    payload = {
+        "status": "success",
+        "message": result["message"],
+        "output": str(written["json_path"]),
+        "export": str(written["export_path"]) if written["export_path"] else None,
+    }
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
