@@ -145,6 +145,25 @@ class RunCliContractTest(unittest.TestCase):
         self.assertFalse(seen["called"])
         self.assertFalse(output.exists())
 
+    def test_empty_string_target_rejected(self):
+        """--target ""（如脚本变量未赋值，用户裁决同样拒绝）→ invalid_input。"""
+        seen = {"called": False}
+
+        def execute(args, data, target_names):
+            seen["called"] = True
+            return {"status": "success", "data": data, "message": "ok"}
+
+        code, stdout = self._run(
+            _make_spec(execute),
+            "--input", str(self.config), "--field", "x",
+            "--target", "",
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "invalid_input")
+        self.assertIn("空名单", report["message"])
+        self.assertFalse(seen["called"])
+
     def test_config_io_error_exit(self):
         """输入文件不可读 → ConfigIOError 契约（code 透传、退出 1）。"""
         code, stdout = self._run(

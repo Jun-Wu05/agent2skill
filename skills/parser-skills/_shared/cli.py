@@ -101,7 +101,9 @@ def run_cli(spec: CliSpec, argv: Optional[List[str]] = None) -> int:
         return 1
 
     target_names = parse_csv(args.target)
-    if args.target and not target_names:
+    # 提供了 --target 但解析后为空（全分隔符/空白/空字符串，如脚本变量
+    # 未赋值）→ 整单拒绝（用户 2026-11-18 裁决），不静默全量
+    if args.target is not None and not target_names:
         print(
             json.dumps(
                 {
