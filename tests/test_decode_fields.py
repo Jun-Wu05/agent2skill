@@ -180,6 +180,41 @@ class DecodeFieldCoreTest(unittest.TestCase):
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["code"], "invalid_input")
 
+    def test_skipped_reasons_truncated_after_five(self):
+        # 7 个 entity，6 个缺 req_body：跳过原因只详列前 5 条，其余计总数
+        data = [
+            make_entity(
+                f"rule_{i}",
+                normalize=[norm_entry("req_header", [""])],
+            )
+            for i in range(7)
+        ]
+        data[0]["normalize"].append(norm_entry("req_body", [""]))
+        result = decode_fields.decode_fields(data, ["req_header", "req_body"])
+        self.assertEqual(result["status"], "success")
+        self.assertIn("等 6 条", result["message"])
+        # 前 5 条逐名报告
+        for i in range(1, 6):
+            self.assertIn(f"rule_{i}（缺 req_body）", result["message"])
+        # 第 6 条不逐名展开
+        self.assertNotIn("rule_6（缺 req_body）", result["message"])
+
+    def test_union_preview_capped_at_thirty(self):
+        # 31 个字段的并集：预览按字典序只列前 30 个并加「等」（零填充使序号序=字典序）
+        data = [
+            make_entity(
+                "rule_a",
+                normalize=[norm_entry(f"f{i:02d}", [""]) for i in range(31)],
+            )
+        ]
+        result = decode_fields.decode_fields(data, ["不存在字段"])
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "field_not_found")
+        self.assertIn("并集: f00、f01", result["message"])
+        self.assertTrue(result["message"].rstrip().endswith("等"))
+        self.assertIn("f29", result["message"])
+        self.assertNotIn("f30", result["message"])
+
 
 class DecodeFieldGuardedTest(unittest.TestCase):
     """decode_fields_guarded() 守卫链：寻址、保留字段、事件字段。"""
