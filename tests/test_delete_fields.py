@@ -16,35 +16,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "skills" / "parser-skills"
-for path in (str(ROOT), str(SKILLS), str(SKILLS / "field-adjust" / "scripts")):
+for path in (str(ROOT), str(ROOT / "tests"), str(SKILLS), str(SKILLS / "field-adjust" / "scripts")):
     if path not in sys.path:
         sys.path.insert(0, path)
 
 import delete_fields  # noqa: E402
 from _shared.event_binding import EVENT_LEVEL_FIELD, EVENT_NAME_FIELD  # noqa: E402
-
-
-def make_entity(name: str, *, normalize=None, filters=None) -> dict:
-    return {
-        "name": name,
-        "parser": {"name": "json", "filter": filters},
-        "normalize": normalize if normalize is not None else [],
-    }
-
-
-def norm_entry(index: str, result=None, field=None) -> dict:
-    return {
-        "mappings": [],
-        "field": field,
-        "sim": None,
-        "result": result if result is not None else [],
-        "info": None,
-        "entity": None,
-        "required": False,
-        "core": None,
-        "value": None,
-        "index": index,
-    }
+from field_adjust_helpers import make_entity, norm_entry  # noqa: E402
 
 
 class DeleteFieldCoreTest(unittest.TestCase):

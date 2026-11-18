@@ -36,6 +36,25 @@ from _shared.event_binding import EVENT_LEVEL_FIELD, EVENT_NAME_FIELD  # noqa: E
 from _shared.field_policy import RESERVED_FIELDS  # noqa: E402
 
 
+def _validate_merge_args(
+    data: list, source_fields: List[str], target_field: str
+) -> Optional[dict]:
+    """输入校验（merge_field 与 merge_field_guarded 共用）。"""
+    if not data:
+        return {"status": "error", "code": "invalid_input", "message": "输入数据为空"}
+    if not source_fields:
+        return {"status": "error", "code": "invalid_input", "message": "未指定源字段"}
+    if len(source_fields) < 2:
+        return {
+            "status": "error",
+            "code": "invalid_input",
+            "message": "至少需要 2 个源字段",
+        }
+    if not target_field:
+        return {"status": "error", "code": "invalid_input", "message": "目标字段名不能为空"}
+    return None
+
+
 def merge_field(
     data: list,
     source_fields: List[str],
@@ -65,21 +84,9 @@ def merge_field(
     Returns:
         {"status": "success"|"error", "data": [...], "message": "..."}
     """
-    if not data:
-        return {"status": "error", "code": "invalid_input", "message": "输入数据为空"}
-
-    if not source_fields:
-        return {"status": "error", "code": "invalid_input", "message": "未指定源字段"}
-
-    if len(source_fields) < 2:
-        return {
-            "status": "error",
-            "code": "invalid_input",
-            "message": "至少需要 2 个源字段",
-        }
-
-    if not target_field:
-        return {"status": "error", "code": "invalid_input", "message": "目标字段名不能为空"}
+    error = _validate_merge_args(data, source_fields, target_field)
+    if error is not None:
+        return error
 
     targets = set(target_names) if target_names else None
     results = []
@@ -87,6 +94,7 @@ def merge_field(
     skipped_empty = 0
     skipped_reasons: list[tuple[str, str]] = []
     all_missing_source = True
+    missing_anywhere: set[str] = set()
     union_indexes: set[str] = set()
 
     for entity in data:
@@ -110,6 +118,7 @@ def merge_field(
 
         missing = [f for f in source_fields if f not in norm_map]
         if missing:
+            missing_anywhere.update(missing)
             skipped_reasons.append((name, f"缺 {'、'.join(missing)}"))
             results.append(entity)
             continue
@@ -177,11 +186,12 @@ def merge_field(
     # 所有目标 entity 都缺源字段 → 真正的 field_not_found（并集词表辅助定位）
     if applied == 0 and skipped_reasons and all_missing_source:
         preview = "、".join(sorted(union_indexes)[:30])
+        missing_names = [f for f in source_fields if f in missing_anywhere]
         return {
             "status": "error",
             "code": "field_not_found",
             "message": (
-                f"源字段 {source_fields} 不存在于任何（目标）子规则；"
+                f"源字段 {'、'.join(missing_names)} 不存在于任何（目标）子规则；"
                 f"全部子规则字段并集: {preview}"
                 + ("等" if len(union_indexes) > 30 else "")
             ),
@@ -223,18 +233,9 @@ def merge_field_guarded(
        （事件字段请走添加字段，自动联动绑定对）；
     5. 自引用（目标字段 ∈ 源字段）→ invalid_input。
     """
-    if not data:
-        return {"status": "error", "code": "invalid_input", "message": "输入数据为空"}
-    if not source_fields:
-        return {"status": "error", "code": "invalid_input", "message": "未指定源字段"}
-    if len(source_fields) < 2:
-        return {
-            "status": "error",
-            "code": "invalid_input",
-            "message": "至少需要 2 个源字段",
-        }
-    if not target_field:
-        return {"status": "error", "code": "invalid_input", "message": "目标字段名不能为空"}
+    error = _validate_merge_args(data, source_fields, target_field)
+    if error is not None:
+        return error
 
     targets, scope_error = resolve_field_scope(data, target_names, group)
     if scope_error is not None:

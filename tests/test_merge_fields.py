@@ -16,35 +16,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "skills" / "parser-skills"
-for path in (str(ROOT), str(SKILLS), str(SKILLS / "field-adjust" / "scripts")):
+for path in (str(ROOT), str(ROOT / "tests"), str(SKILLS), str(SKILLS / "field-adjust" / "scripts")):
     if path not in sys.path:
         sys.path.insert(0, path)
 
 import merge_fields  # noqa: E402
 from _shared.event_binding import EVENT_LEVEL_FIELD, EVENT_NAME_FIELD  # noqa: E402
-
-
-def make_entity(name: str, *, normalize=None, filters=None) -> dict:
-    return {
-        "name": name,
-        "parser": {"name": "json", "filter": filters},
-        "normalize": normalize if normalize is not None else [],
-    }
-
-
-def norm_entry(index: str, result=None, field=None) -> dict:
-    return {
-        "mappings": [],
-        "field": field,
-        "sim": None,
-        "result": result if result is not None else [],
-        "info": None,
-        "entity": None,
-        "required": False,
-        "core": None,
-        "value": None,
-        "index": index,
-    }
+from field_adjust_helpers import make_entity, norm_entry  # noqa: E402
 
 
 class MergeFieldCoreTest(unittest.TestCase):
@@ -122,8 +100,10 @@ class MergeFieldCoreTest(unittest.TestCase):
         result = merge_fields.merge_field(self.data, ["a", "z"], "c")
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["code"], "field_not_found")
-        self.assertIn("不存在于任何（目标）子规则", result["message"])
+        # 只点名真正缺失的源字段（a 在子规则里存在，不背锅）
+        self.assertIn("源字段 z 不存在", result["message"])
         # 消息附全部子规则字段并集预览，帮助定位名字错误
+        self.assertIn("并集", result["message"])
         self.assertIn("a", result["message"])
         self.assertIn("b", result["message"])
 
