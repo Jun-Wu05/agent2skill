@@ -27,6 +27,10 @@ _SKILLS_ROOT = Path(__file__).resolve().parents[2]
 if str(_SKILLS_ROOT) not in sys.path:
     sys.path.insert(0, str(_SKILLS_ROOT))
 
+from _shared.entity_scope import resolve_field_scope  # noqa: E402
+from _shared.event_binding import EVENT_LEVEL_FIELD, EVENT_NAME_FIELD  # noqa: E402
+from _shared.field_policy import RESERVED_FIELDS  # noqa: E402
+
 # 运行时 OGNL 解码语句模板：值原地覆盖原字段（key=字段名）
 _OGNL_TEMPLATE = "<%@com.hansight.dataviewer.utils.Base64@Base64Decode({field})%>"
 
@@ -159,3 +163,61 @@ def decode_fields(
     if skipped_empty:
         message += f"（跳过 {skipped_empty} 个无 normalize 的 entity）"
     return {"status": "success", "data": results, "message": message}
+
+
+# ---------------------------------------------------------------------------
+# 解码守卫链（寻址 / 保留字段 / 事件绑定字段）
+# ---------------------------------------------------------------------------
+
+
+def decode_fields_guarded(
+    data: list,
+    field_names: List[str],
+    target_names: Optional[List[str]] = None,
+    group: str = "all",
+) -> dict:
+    """带守卫链的 base64 字段解码。
+
+    守卫顺序（任一命中即拒绝，稳定错误码）：
+    1. data / 字段名空校验 → invalid_input；
+    2. 寻址解析：target 未知名 → rule_name_not_found；group 分组
+       无标注 → event_annotation_required、组内无匹配 → rule_name_not_found；
+    3. 任一字段为系统保留字段 → reserved_field_rejected（original_log 是
+       原始日志审计锚点，运行时被 OGNL 覆盖会断审计链）；
+    4. 任一字段为【事件名称】/【事件级别】→ invalid_event_name
+       （解码会破坏事件绑定，事件字段请走添加字段）。
+    """
+    error = _validate_decode_args(data, field_names)
+    if error is not None:
+        return error
+
+    targets, scope_error = resolve_field_scope(data, target_names, group)
+    if scope_error is not None:
+        return scope_error
+
+    reserved = [f for f in field_names if f in RESERVED_FIELDS]
+    if reserved:
+        return {
+            "status": "error",
+            "code": "reserved_field_rejected",
+            "message": (
+                f"字段 {'、'.join(reserved)} 为系统保留字段，"
+                "不允许启用 base64 解码"
+            ),
+        }
+
+    event_fields = [
+        f for f in field_names if f in (EVENT_NAME_FIELD, EVENT_LEVEL_FIELD)
+    ]
+    if event_fields:
+        return {
+            "status": "error",
+            "code": "invalid_event_name",
+            "message": (
+                f"字段 {'、'.join(event_fields)} 为事件绑定字段，"
+                "解码会破坏事件名称/事件级别绑定；"
+                "事件字段请通过添加字段设置（自动按绑定关系联动写入）"
+            ),
+        }
+
+    return decode_fields(data, field_names, targets)

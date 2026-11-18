@@ -181,5 +181,154 @@ class DecodeFieldCoreTest(unittest.TestCase):
         self.assertEqual(result["code"], "invalid_input")
 
 
+class DecodeFieldGuardedTest(unittest.TestCase):
+    """decode_fields_guarded() 守卫链：寻址、保留字段、事件字段。"""
+
+    def setUp(self):
+        self.data = [
+            make_entity(
+                "rule_threat",
+                normalize=[
+                    norm_entry("req_header", [""]),
+                    norm_entry("req_body", [""]),
+                    norm_entry(EVENT_NAME_FIELD, ["终端告警"]),
+                    norm_entry(EVENT_LEVEL_FIELD, ["提醒"]),
+                ],
+            ),
+            make_entity(
+                "rule_normal",
+                normalize=[
+                    norm_entry("req_header", [""]),
+                    norm_entry("req_body", [""]),
+                    norm_entry(EVENT_NAME_FIELD, ["登录事件"]),
+                ],
+            ),
+            make_entity("rule_plain", normalize=[norm_entry("req_header", [""])]),
+        ]
+
+    def _ok(self, result):
+        self.assertEqual(result["status"], "success")
+        return result
+
+    def test_guarded_decode_applies_to_all(self):
+        result = self._ok(
+            decode_fields.decode_fields_guarded(self.data, ["req_header", "req_body"])
+        )
+        for rule in result["data"][:2]:
+            self.assertEqual(rule["parser"]["filter"][-1]["name"], "addFields")
+        # rule_plain 缺 req_body，跳过并报告
+        self.assertIn("rule_plain（缺 req_body）", result["message"])
+
+    def test_reserved_field_rejected(self):
+        for reserved in ("original_log", "rule_name_list", "日志类型"):
+            result = decode_fields.decode_fields_guarded(self.data, [reserved])
+            self.assertEqual(result["status"], "error")
+            self.assertEqual(result["code"], "reserved_field_rejected")
+            self.assertIn("系统保留字段", result["message"])
+
+    def test_event_name_field_rejected(self):
+        result = decode_fields.decode_fields_guarded(self.data, [EVENT_NAME_FIELD])
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_event_name")
+        self.assertIn("添加字段", result["message"])
+
+    def test_event_level_field_rejected(self):
+        result = decode_fields.decode_fields_guarded(self.data, [EVENT_LEVEL_FIELD])
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_event_name")
+        self.assertIn("添加字段", result["message"])
+
+    def test_partially_reserved_fields_rejected(self):
+        # 混合普通字段与保留字段：整单拒绝，不做部分应用
+        result = decode_fields.decode_fields_guarded(
+            self.data, ["req_header", "original_log"]
+        )
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "reserved_field_rejected")
+
+    def test_empty_data_invalid_input(self):
+        result = decode_fields.decode_fields_guarded([], ["req_header"])
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+
+    def test_empty_fields_invalid_input(self):
+        result = decode_fields.decode_fields_guarded(self.data, [])
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+
+    def test_unknown_target_rejected(self):
+        result = decode_fields.decode_fields_guarded(
+            self.data, ["req_header"], target_names=["rule_z"]
+        )
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "rule_name_not_found")
+        self.assertIn("未找到子规则: rule_z", result["message"])
+        self.assertIn(
+            "可用子规则: rule_threat、rule_normal、rule_plain", result["message"]
+        )
+
+    def test_group_threat_selects_annotated_threat_only(self):
+        result = self._ok(
+            decode_fields.decode_fields_guarded(
+                self.data, ["req_header"], group="threat"
+            )
+        )
+        self.assertIn("目标 1 个", result["message"])
+        # 威胁组 rule_threat 启用解码，未标注的 rule_plain 原样透传
+        self.assertEqual(result["data"][0]["parser"]["filter"][-1]["name"], "addFields")
+        self.assertEqual(result["data"][2]["parser"]["filter"], None)
+
+    def test_group_non_threat_selects_annotated_non_threat_only(self):
+        result = self._ok(
+            decode_fields.decode_fields_guarded(
+                self.data, ["req_header"], group="non-threat"
+            )
+        )
+        self.assertIn("目标 1 个", result["message"])
+        self.assertEqual(result["data"][1]["parser"]["filter"][-1]["name"], "addFields")
+        self.assertEqual(result["data"][0]["parser"]["filter"], None)
+
+    def test_group_without_annotation_reports_event_annotation_required(self):
+        data = [
+            make_entity(
+                "rule_a", normalize=[norm_entry("req_header", [""])]
+            )
+        ]
+        result = decode_fields.decode_fields_guarded(
+            data, ["req_header"], group="threat"
+        )
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "event_annotation_required")
+        self.assertIn("添加字段", result["message"])
+
+    def test_group_without_match_reports_rule_name_not_found(self):
+        data = [
+            make_entity(
+                "rule_normal",
+                normalize=[
+                    norm_entry("req_header", [""]),
+                    norm_entry(EVENT_NAME_FIELD, ["登录事件"]),
+                ],
+            )
+        ]
+        result = decode_fields.decode_fields_guarded(
+            data, ["req_header"], group="threat"
+        )
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "rule_name_not_found")
+        self.assertIn("没有属于威胁组的子规则", result["message"])
+
+    def test_target_takes_precedence_over_group(self):
+        # target 指向威胁组规则而 group 选非威胁组：target 优先
+        result = self._ok(
+            decode_fields.decode_fields_guarded(
+                self.data, ["req_header"], target_names=["rule_threat"],
+                group="non-threat",
+            )
+        )
+        self.assertIn("目标 1 个", result["message"])
+        self.assertEqual(result["data"][0]["parser"]["filter"][-1]["name"], "addFields")
+
+
 if __name__ == "__main__":
     unittest.main()
