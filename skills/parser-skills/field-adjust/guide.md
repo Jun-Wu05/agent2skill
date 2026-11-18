@@ -87,6 +87,11 @@ python <parser-skills>/field-adjust/scripts/add_fields.py \
 无 normalize 的 entity 被跳过且计数如实报告；名单外（`--target`）的 entity 原样透传。
 数据结构细节见 [references/data_structure.md](references/data_structure.md)。
 
+## 添加守卫链（任一命中即拒绝，退出码 1）
+
+1. **寻址校验**：`--target` 未知名（含混合名单中个别未名）→ `rule_name_not_found`（附可用子规则提示，前 20 个 + 「等」），整单拒绝——与其他子命令行为一致，防止名字打错静默零生效
+2. 事件字段守卫见下节【事件名称】绑定守卫
+
 ## 【事件名称】绑定守卫
 
 手动添加【事件名称】时执行确定性守卫（分类表单一事实源：`_shared/event_binding.py`）：
