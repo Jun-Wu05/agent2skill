@@ -24,9 +24,7 @@ CLI 用法:
 
 from __future__ import annotations
 
-import argparse
 import copy
-import json
 import re
 import sys
 from pathlib import Path
@@ -36,8 +34,7 @@ _SKILLS_ROOT = Path(__file__).resolve().parents[2]
 if str(_SKILLS_ROOT) not in sys.path:
     sys.path.insert(0, str(_SKILLS_ROOT))
 
-from _shared import report as skill_report  # noqa: E402
-from _shared.config_io import ConfigIOError, load_entities  # noqa: E402
+from _shared import cli  # noqa: E402
 from _shared.entity_scope import entities_in_scope, resolve_field_scope  # noqa: E402
 from _shared.event_binding import EVENT_LEVEL_FIELD, EVENT_NAME_FIELD  # noqa: E402
 from _shared.field_policy import RESERVED_FIELDS  # noqa: E402
@@ -398,102 +395,55 @@ def extract_field_guarded(
 
 
 # ---------------------------------------------------------------------------
-# CLI（文件输入/输出契约）
+# CLI（文件输入/输出契约，同形骨架见 _shared/cli.py）
 # ---------------------------------------------------------------------------
 
 
-def main(argv: Optional[List[str]] = None) -> int:
-    """CLI 入口：文件契约包装（读配置 → 守卫链 → 双写 → 落盘报告）。"""
-    parser = argparse.ArgumentParser(
-        prog="extract_fields.py",
-        description="从解析规则（mapping entities）的已有字段中按正则提取新字段",
-    )
-    parser.add_argument(
-        "--input", "-i", required=True,
-        help="配置文件路径（Base64 txt / 原生 JSON / TXT，内容为 JSON 数组）",
-    )
-    parser.add_argument(
-        "--source-field", "-s", required=True,
-        help="被提取字段名（须为已有字段，如 original_log / req_header）",
-    )
-    parser.add_argument(
-        "--pattern", "-p", required=True,
-        help="正则表达式（由 agent 按样本生成；必须全匹配样本整条才生效）",
-    )
-    parser.add_argument(
-        "--field", default=None,
-        help="新字段名；缺省按 --keyword 命名（冲突加 new 前缀），"
-             "再退回源字段名尾段",
-    )
-    parser.add_argument(
-        "--keyword", default=None,
-        help="提取目标关键词（如 client、Referer），缺省命名用",
-    )
-    parser.add_argument(
-        "--output", "-o", default=None,
-        help="修改后配置 JSON 输出路径（缺省 <输入名>.modified.json）",
-    )
-    parser.add_argument(
-        "--target", default=None,
-        help="目标子规则名（按 name 精确寻址），逗号分隔；缺省全部 entity",
-    )
-    parser.add_argument(
-        "--group", default="all", choices=["all", "threat", "non-threat"],
-        help="按已标注事件名称分组寻址（threat=威胁组 / non-threat=非威胁组）；"
-             "与 --target 并存时 target 优先",
-    )
-    parser.add_argument(
-        "--no-export", action="store_true",
-        help="不产出 Base64 导出文件（缺省会一并产出）",
-    )
-    args = parser.parse_args(argv)
-
-    try:
-        data = load_entities(args.input)
-    except ConfigIOError as exc:
-        print(
-            json.dumps(
-                {"status": "error", "code": exc.code, "message": exc.message},
-                ensure_ascii=False,
-            )
-        )
-        return 1
-
-    new_field = args.field or None  # 空串归一为 None（触发缺省命名链）
-    target_names = None
-    if args.target:
-        target_names = [name.strip() for name in args.target.split(",") if name.strip()]
-
-    result = extract_field_guarded(
+_SPEC = cli.CliSpec(
+    prog="extract_fields.py",
+    description="从解析规则（mapping entities）的已有字段中按正则提取新字段",
+    arguments=(
+        (
+            ("--source-field", "-s"),
+            {
+                "required": True,
+                "help": "被提取字段名（须为已有字段，如 original_log / req_header）",
+            },
+        ),
+        (
+            ("--pattern", "-p"),
+            {
+                "required": True,
+                "help": "正则表达式（由 agent 按样本生成；必须全匹配样本整条才生效）",
+            },
+        ),
+        (
+            ("--field",),
+            {
+                "default": None,
+                "help": "新字段名；缺省按 --keyword 命名（冲突加 new 前缀），"
+                        "再退回源字段名尾段",
+            },
+        ),
+        (
+            ("--keyword",),
+            {"default": None, "help": "提取目标关键词（如 client、Referer），缺省命名用"},
+        ),
+    ),
+    execute=lambda args, data, target_names: extract_field_guarded(
         data,
-        new_field,
+        args.field or None,  # 空串归一为 None（触发缺省命名链）
         args.source_field,
         args.pattern,
         keyword=args.keyword,
         target_names=target_names,
         group=args.group,
-    )
-    if result.get("status") != "success":
-        print(json.dumps(result, ensure_ascii=False, indent=2))
-        return 1
+    ),
+)
 
-    input_path = Path(args.input)
-    output = (
-        Path(args.output)
-        if args.output
-        else input_path.with_name(input_path.stem + ".modified.json")
-    )
-    written = skill_report.write_result(
-        result["data"], output, make_export=not args.no_export
-    )
-    payload = {
-        "status": "success",
-        "message": result["message"],
-        "output": str(written["json_path"]),
-        "export": str(written["export_path"]) if written["export_path"] else None,
-    }
-    print(json.dumps(payload, ensure_ascii=False, indent=2))
-    return 0
+
+def main(argv: Optional[List[str]] = None) -> int:
+    return cli.run_cli(_SPEC, argv)
 
 
 if __name__ == "__main__":
