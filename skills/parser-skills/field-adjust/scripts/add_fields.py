@@ -27,7 +27,7 @@ if str(_SKILLS_ROOT) not in sys.path:
 
 from _shared import report as skill_report
 from _shared.config_io import ConfigIOError, load_entities
-from _shared.entity_scope import entities_in_scope
+from _shared.entity_scope import entities_in_scope, resolve_field_scope
 from _shared.event_binding import (
     EVENT_LEVEL_FIELD,
     EVENT_NAME_FIELD,
@@ -218,12 +218,19 @@ def add_field_guarded(
 ) -> dict:
     """带事件名称绑定守卫的字段添加。
 
-    - 直接添加【事件级别】被拒绝：级别随【事件名称】按绑定表联动写入。
-    - 【事件名称】必须是 21 个合法分类名之一且不支持引用型值；
-      合法时自动联动写入绑定的【事件级别】（同目标范围）。
-    - 目标范围内已存在【事件级别】时返回 event_level_conflict
-      （skip_existing=True 时跳过该检查，由跳过语义兜底）。
+    守卫顺序（任一命中即拒绝，稳定错误码）：
+    1. 寻址解析：target 未知名 → rule_name_not_found（附可用子规则
+       提示），与其他子命令行为一致；
+    2. 直接添加【事件级别】被拒绝：级别随【事件名称】按绑定表联动写入；
+    3. 【事件名称】必须是 21 个合法分类名之一且不支持引用型值；
+       合法时自动联动写入绑定的【事件级别】（同目标范围）。
+    4. 目标范围内已存在【事件级别】时返回 event_level_conflict
+       （skip_existing=True 时跳过该检查，由跳过语义兜底）。
     """
+    targets, scope_error = resolve_field_scope(data, target_names, "all")
+    if scope_error is not None:
+        return scope_error
+
     if field_name == EVENT_LEVEL_FIELD:
         return {
             "status": "error",
@@ -248,7 +255,7 @@ def add_field_guarded(
                 "message": f"【事件名称】必须是以下分类名之一: {legal}",
             }
         if not skip_existing:
-            for entity in entities_in_scope(data, target_names):
+            for entity in entities_in_scope(data, targets):
                 if _has_field(entity, EVENT_LEVEL_FIELD):
                     return {
                         "status": "error",
@@ -263,7 +270,7 @@ def add_field_guarded(
                 data,
                 EVENT_NAME_FIELD,
                 field_value,
-                target_names,
+                targets,
                 skip_existing,
                 normalize_metadata=event_name_normalize_metadata(field_value),
             )
@@ -276,7 +283,7 @@ def add_field_guarded(
                 first["data"],
                 EVENT_LEVEL_FIELD,
                 level,
-                target_names,
+                targets,
                 skip_existing,
                 normalize_metadata=event_level_normalize_metadata(level),
             )
@@ -291,7 +298,7 @@ def add_field_guarded(
             ),
         }
     return _with_error_code(
-        add_field(data, field_name, field_value, target_names, skip_existing)
+        add_field(data, field_name, field_value, targets, skip_existing)
     )
 
 

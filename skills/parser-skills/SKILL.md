@@ -3,7 +3,7 @@ name: parser-skills
 description: 解析规则技能集 - 日志解析规则（Base64 配置/JSON/TXT）与日志数据的统一处理入口，涵盖字段调整（添加/删除/合并/base64 解码/正则提取字段）、标准字段映射、日志类型提取、枚举提取与填充、威胁类型映射。当用户说"添加字段、新增字段、删除字段、移除字段、合并字段、base64 解码、解码字段、正则提取、从某字段提取X、字段映射、映射到标准字段、日志类型、把X当作日志类型、提取枚举值、枚举填充、威胁类型、导出Base64配置"等解析规则操作时使用。当前已实现【添加字段】【删除字段】【合并字段】【base64 解码】【正则提取】子命令，其余功能按计划交付中。
 license: MIT
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
   status: 字段调整-添加/删除/合并/base64 解码/正则提取字段已实现；其余子模块交付中
 ---
 
@@ -39,7 +39,7 @@ metadata:
 
 ### 添加字段（field-adjust · add）
 
-对解析规则的每个目标 entity：normalize 追加字段条目 + parser.filter 追加 addFields 绑定；支持固定值与 `%{index}` 引用（原样存储，运行时由解析器替换）；【事件名称】受 21 分类确定性守卫约束并自动联动写入绑定的【事件级别】。完整规则、参数与示例见 [field-adjust/guide.md](field-adjust/guide.md)。
+对解析规则的每个目标 entity：normalize 追加字段条目 + parser.filter 追加 addFields 绑定；支持固定值与 `%{index}` 引用（原样存储，运行时由解析器替换）；【事件名称】受 21 分类确定性守卫约束并自动联动写入绑定的【事件级别】；支持按子规则名（`--target`）寻址，未知名报 `rule_name_not_found`（附可用子规则提示）整单拒绝。完整规则、参数与示例见 [field-adjust/guide.md](field-adjust/guide.md)。
 
 ```bash
 # 示例：为 Base64 配置添加固定值字段

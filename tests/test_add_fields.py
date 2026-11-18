@@ -223,6 +223,58 @@ class EventNameGuardTest(unittest.TestCase):
         self.assertEqual(result["code"], "field_conflict")
 
 
+class TargetScopeGuardTest(unittest.TestCase):
+    """target 寻址校验（未知名拒绝，与 delete 等子命令行为一致）。"""
+
+    def setUp(self):
+        self.data = [
+            make_entity("rule_a", normalize=[norm_entry("src_ip", ["1"])]),
+            make_entity("rule_b", normalize=[norm_entry("dst_ip", ["2"])]),
+        ]
+
+    def test_unknown_target_rejected_with_available_hint(self):
+        result = add_fields.add_field_guarded(
+            self.data, "主机ip", "1.1.1.1", target_names=["不存在的规则"]
+        )
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "rule_name_not_found")
+        self.assertIn("未找到子规则: 不存在的规则", result["message"])
+        self.assertIn("可用子规则: rule_a、rule_b", result["message"])
+
+    def test_mixed_target_with_unknown_name_still_rejected(self):
+        result = add_fields.add_field_guarded(
+            self.data, "主机ip", "1.1.1.1", target_names=["rule_a", "打错的规则"]
+        )
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "rule_name_not_found")
+        self.assertIn("打错的规则", result["message"])
+
+    def test_known_target_still_applies(self):
+        result = add_fields.add_field_guarded(
+            self.data, "主机ip", "1.1.1.1", target_names=["rule_a"]
+        )
+        self.assertEqual(result["status"], "success")
+        self.assertIn("目标 1 个", result["message"])
+        # 名单外 entity 原样透传
+        self.assertEqual(result["data"][1]["normalize"][0]["index"], "dst_ip")
+        self.assertEqual(len(result["data"][1]["normalize"]), 1)
+
+    def test_scope_check_precedes_event_field_guards(self):
+        # 寻址校验放最前：target 未名先于事件字段拦截报错
+        result = add_fields.add_field_guarded(
+            self.data, "事件级别", "提醒", target_names=["不存在的规则"]
+        )
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "rule_name_not_found")
+
+    def test_event_name_path_also_validates_targets(self):
+        result = add_fields.add_field_guarded(
+            self.data, "事件名称", "终端告警", target_names=["不存在的规则"]
+        )
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "rule_name_not_found")
+
+
 class CliEndToEndTest(unittest.TestCase):
     """文件契约端到端：Base64 输入 → 修改后 JSON + 平台可导入 Base64 输出。
 
@@ -296,6 +348,45 @@ class CliEndToEndTest(unittest.TestCase):
         self.assertEqual(code, 1)
         report = json.loads(stdout)
         self.assertEqual(report["code"], "field_conflict")
+
+    def test_e2e_unknown_target_reports_rule_name_not_found(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE), "--field", "主机ip", "--value", "1.1.1.1",
+            "--target", "不存在的规则",
+            "--output", str(self._tmp / "o.json"),
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "rule_name_not_found")
+        self.assertIn("可用子规则", report["message"])
+
+    def test_e2e_mixed_target_with_unknown_name_rejected(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE), "--field", "主机ip", "--value", "1.1.1.1",
+            "--target", "某厂_AUDIT_json_子规则,打错的规则",
+            "--output", str(self._tmp / "o.json"),
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "rule_name_not_found")
+        # 未失败产物不落盘
+        self.assertFalse((self._tmp / "o.json").exists())
+
+    def test_e2e_valid_target_scopes_output(self):
+        output = self._tmp / "scoped.modified.json"
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE), "--field", "主机ip", "--value", "1.1.1.1",
+            "--target", "某厂_AUDIT_json_子规则",
+            "--output", str(output), "--no-export",
+        )
+        self.assertEqual(code, 0, stdout)
+        report = json.loads(stdout)
+        self.assertEqual(report["status"], "success")
+        self.assertIn("目标 1 个", report["message"])
+        updated = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual(updated[0]["normalize"][-1]["index"], "主机ip")
+        # 名单外 entity 原样透传
+        self.assertEqual(updated[1]["normalize"][0]["index"], "dst_ip")
 
 
 if __name__ == "__main__":
