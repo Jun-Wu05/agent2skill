@@ -143,6 +143,21 @@ class DeleteFieldCoreTest(unittest.TestCase):
         remove_filter = updated[0]["parser"]["filter"][0]
         self.assertEqual(remove_filter["fields"], ["旧字段", "src_ip"])
 
+    def test_merges_into_existing_removefields_with_null_fields(self):
+        # 已有 removeFields 过滤器的 fields 键为 null：视作空列表合并
+        data = [
+            make_entity(
+                "rule_a",
+                normalize=[norm_entry("src_ip", ["1"])],
+                filters=[
+                    {"name": "removeFields", "id": "", "fields": None},
+                ],
+            )
+        ]
+        updated = self._ok(delete_fields.delete_field(data, ["src_ip"]))
+        remove_filter = updated[0]["parser"]["filter"][0]
+        self.assertEqual(remove_filter["fields"], ["src_ip"])
+
     def test_missing_field_success_with_not_found(self):
         result = delete_fields.delete_field(self.data, ["不存在"])
         self.assertEqual(result["status"], "success")

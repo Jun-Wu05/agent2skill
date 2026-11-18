@@ -30,6 +30,7 @@ if str(_SKILLS_ROOT) not in sys.path:
 
 from _shared import report as skill_report  # noqa: E402
 from _shared.config_io import ConfigIOError, load_entities  # noqa: E402
+from _shared.entity_scope import entities_in_scope  # noqa: E402
 from _shared.event_binding import (  # noqa: E402
     EVENT_LEVEL_FIELD,
     EVENT_NAME_FIELD,
@@ -66,15 +67,20 @@ def delete_field(
          "not_found": [...]|None}
     """
     if not data:
-        return {"status": "error", "message": "输入数据为空"}
+        return {"status": "error", "code": "invalid_input", "message": "输入数据为空"}
 
     if not fields_to_delete:
-        return {"status": "error", "message": "未指定要删除的字段"}
+        return {
+            "status": "error",
+            "code": "invalid_input",
+            "message": "未指定要删除的字段",
+        }
 
     reserved = [f for f in fields_to_delete if f in RESERVED_FIELDS]
     if reserved:
         return {
             "status": "error",
+            "code": "reserved_field_rejected",
             "message": f"字段 {reserved} 为系统保留字段，不允许删除",
         }
 
@@ -144,7 +150,7 @@ def delete_field(
                 break
 
         if existing_remove is not None:
-            existing_fields = filters[existing_remove].get("fields", [])
+            existing_fields = filters[existing_remove].get("fields") or []
             for fld in deletable:
                 if fld not in existing_fields:
                     existing_fields.append(fld)
@@ -241,13 +247,6 @@ def find_dangling_references(
     return tuple(conflicts)
 
 
-def _entities_in_scope(data: list, target_names: Optional[List[str]]):
-    targets = set(target_names) if target_names else None
-    for entity in data:
-        if targets is None or entity.get("name") in targets:
-            yield entity
-
-
 def _resolve_field_scope(
     data: list,
     target_names: Optional[List[str]],
@@ -314,16 +313,6 @@ def _resolve_field_scope(
     return None, None
 
 
-def _with_error_code(result: dict) -> dict:
-    """给 delete_field 的错误结果补稳定错误码。"""
-    if result.get("status") == "error":
-        message = str(result.get("message", ""))
-        code = "reserved_field_rejected" if "保留字段" in message else "invalid_input"
-        result = dict(result)
-        result.setdefault("code", code)
-    return result
-
-
 def delete_field_guarded(
     data: list,
     fields: List[str],
@@ -369,7 +358,7 @@ def delete_field_guarded(
 
     issues = []
     for conflict in find_dangling_references(
-        _entities_in_scope(data, targets), effective_fields
+        entities_in_scope(data, targets), effective_fields
     ):
         if conflict.kind == "merger":
             issues.append(
@@ -386,7 +375,7 @@ def delete_field_guarded(
 
     result = delete_field(data, effective_fields, targets)
     if result.get("status") != "success":
-        return _with_error_code(result)
+        return result
     return {
         "status": "success",
         "data": result["data"],
@@ -410,7 +399,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         help="配置文件路径（Base64 txt / 原生 JSON / TXT，内容为 JSON 数组）",
     )
     parser.add_argument(
-        "--fields", "-f", required=True,
+        "--fields", required=True,
         help="要删除的字段名，逗号分隔",
     )
     parser.add_argument(

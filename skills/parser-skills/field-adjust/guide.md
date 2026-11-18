@@ -125,10 +125,10 @@ python <parser-skills>/field-adjust/scripts/delete_fields.py \
 
 ### 删除守卫链（任一命中即拒绝，退出码 1）
 
-1. **保留字段拦截**：`original_log` / `rule_name_list` / `日志类型` → `reserved_field_rejected`
-2. **绑定对联动删除**：删【事件名称】或【事件级别】任一时自动扩展为两者（避免留下绑定残缺），消息注明「已联动删除绑定对（事件名称+事件级别）」
-3. **悬空引用守卫**（只查目标范围内 entity）：被删字段是 merger 过滤器的源字段、或被任一过滤器 `fields` 值中的 `%{字段}` 占位引用 → `field_reference_conflict`，需先解除引用再删
-4. **寻址校验**：`--target` 未知名 → `rule_name_not_found`（附可用子规则提示）；`--group` 分组时配置内无任何【事件名称】标注 → `event_annotation_required`，组内无匹配 → `rule_name_not_found`
+1. **寻址校验**：`--target` 未知名 → `rule_name_not_found`（附可用子规则提示）；`--group` 分组时配置内无任何【事件名称】标注 → `event_annotation_required`，组内无匹配 → `rule_name_not_found`
+2. **保留字段拦截**：`original_log` / `rule_name_list` / `日志类型` → `reserved_field_rejected`
+3. **绑定对联动删除**：删【事件名称】或【事件级别】任一时自动扩展为两者（避免留下绑定残缺），消息注明「已联动删除绑定对（事件名称+事件级别）」
+4. **悬空引用守卫**（只查目标范围内 entity）：被删字段是 merger 过滤器的源字段、或被任一过滤器 `fields` 值中的 `%{字段}` 占位引用 → `field_reference_conflict`，需先解除引用再删
 
 修改【事件名称】的标准流程是 delete + add 两步：先删绑定对，再用 add 重新标注。
 

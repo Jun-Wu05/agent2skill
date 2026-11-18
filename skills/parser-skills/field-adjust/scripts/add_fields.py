@@ -27,6 +27,7 @@ if str(_SKILLS_ROOT) not in sys.path:
 
 from _shared import report as skill_report
 from _shared.config_io import ConfigIOError, load_entities
+from _shared.entity_scope import entities_in_scope
 from _shared.event_binding import (
     EVENT_LEVEL_FIELD,
     EVENT_NAME_FIELD,
@@ -178,13 +179,6 @@ def add_field(
 # ---------------------------------------------------------------------------
 
 
-def _entities_in_scope(data: list, target_names: Optional[List[str]]):
-    targets = set(target_names) if target_names else None
-    for entity in data:
-        if targets is None or entity.get("name") in targets:
-            yield entity
-
-
 def _has_field(entity: dict, field_name: str) -> bool:
     """检查 entity 是否已存在某字段（normalize index 或 addFields 绑定）。"""
     for entry in entity.get("normalize") or []:
@@ -254,7 +248,7 @@ def add_field_guarded(
                 "message": f"【事件名称】必须是以下分类名之一: {legal}",
             }
         if not skip_existing:
-            for entity in _entities_in_scope(data, target_names):
+            for entity in entities_in_scope(data, target_names):
                 if _has_field(entity, EVENT_LEVEL_FIELD):
                     return {
                         "status": "error",
