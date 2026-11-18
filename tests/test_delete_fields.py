@@ -359,5 +359,93 @@ class DeleteFieldGuardedTest(unittest.TestCase):
         self.assertEqual(result["message"].count("未找到字段"), 1)
 
 
+class CliEndToEndTest(unittest.TestCase):
+    """文件契约端到端：Base64 输入 → 修改后 JSON + 平台可导入 Base64 输出。
+
+    以进程内调用 main() + stdout 重定向实现，避免子进程管道
+    （受限环境下 EPERM），任何环境可跑；真实 CLI 演示见 SKILL.md。
+    """
+
+    FIXTURE = ROOT / "testdata" / "sample_config.json"
+
+    def setUp(self):
+        (ROOT / ".tmp_tests").mkdir(exist_ok=True)
+        self._tmp = Path(tempfile.mkdtemp(dir=str(ROOT / ".tmp_tests")))
+        self.addCleanup(self._cleanup)
+
+    def _cleanup(self):
+        import shutil
+
+        shutil.rmtree(self._tmp, ignore_errors=True)
+        tmp_root = ROOT / ".tmp_tests"
+        if tmp_root.is_dir() and not any(tmp_root.iterdir()):
+            tmp_root.rmdir()
+
+    def _run(self, *argv):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = delete_fields.main([*argv])
+        return code, buf.getvalue()
+
+    def test_e2e_delete_field_on_base64_input(self):
+        payload = json.loads(self.FIXTURE.read_text(encoding="utf-8"))
+        b64_file = self._tmp / "config.b64.txt"
+        b64_file.write_text(
+            base64.b64encode(
+                json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            ).decode("ascii"),
+            encoding="utf-8",
+        )
+        output = self._tmp / "out.modified.json"
+        code, stdout = self._run(
+            "--input", str(b64_file),
+            "--fields", "src_ip",
+            "--output", str(output),
+        )
+        self.assertEqual(code, 0, stdout)
+        report = json.loads(stdout)
+        self.assertEqual(report["status"], "success")
+        self.assertIn("成功从 1 个 entity 删除 1 个字段", report["message"])
+        self.assertIn("跳过 1 个无 normalize", report["message"])
+        # 修改后 JSON：src_ip 条目消失，removeFields 写入
+        updated = json.loads(output.read_text(encoding="utf-8"))
+        self.assertNotIn("src_ip", [e["index"] for e in updated[0]["normalize"]])
+        self.assertEqual(updated[0]["parser"]["filter"][-1]["name"], "removeFields")
+        # 平台可导入 Base64 导出文件
+        export = Path(report["export"])
+        self.assertTrue(export.exists())
+        self.assertRegex(export.name, r"^fieldadjusted_config_\d{8}_\d{4}\.txt$")
+        decoded = json.loads(base64.b64decode(export.read_text(encoding="utf-8")))
+        self.assertEqual(decoded, updated)
+
+    def test_e2e_reserved_field_exit_code(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--fields", "original_log",
+            "--output", str(self._tmp / "o.json"),
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "reserved_field_rejected")
+
+    def test_e2e_unknown_target_exit_code(self):
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE),
+            "--fields", "src_ip",
+            "--target", "不存在的规则",
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "rule_name_not_found")
+
+    def test_e2e_missing_input_reports_config_required(self):
+        code, stdout = self._run(
+            "--input", str(self._tmp / "nope.txt"), "--fields", "x"
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "config_required")
+
+
 if __name__ == "__main__":
     unittest.main()
