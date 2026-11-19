@@ -1,0 +1,27 @@
+{
+  "_comment": "字段标签规则表。键=标签名，值=关键词列表。字段名拆分为 token 后，任一 token 命中关键词即打上该标签。匹配在 token 级进行（非子串），避免 'severity' 含 'ver' 误触发 version 等 bug。",
+  "rules": {
+    "source":      ["src", "source", "sip"],
+    "destination": ["dst", "dest", "destination", "dip"],
+    "network":     ["src", "source", "dst", "dest", "destination", "ip", "network", "vlan", "vxlan"],
+    "address":     ["address", "addr", "ip"],
+    "port":        ["port"],
+    "mac_address": ["mac"],
+    "time":        ["time", "timestamp", "date", "duration"],
+    "name":        ["name", "label", "title", "filename"],
+    "identifier":  ["id", "identifier", "guid", "uuid", "xid"],
+    "type":        ["type", "category", "class"],
+    "status":      ["status", "state", "flag", "code"],
+    "numeric":     ["count", "number", "size", "length", "total", "num", "cnt", "len"],
+    "version":     ["version", "ver"],
+    "hash":        ["hash", "md5", "sha", "checksum"],
+    "path":        ["path", "directory", "folder"],
+    "protocol":    ["protocol", "proto", "dns", "dhcp", "http", "ftp", "smtp", "tcp", "udp", "icmp", "arp", "ssh", "tls", "ssl"],
+    "http":        ["http", "https", "url", "uri"],
+    "collection":  ["list", "items", "entries"],
+    "threat":      ["threat", "attack", "attck", "risk", "severity", "malware"],
+    "victim":      ["victim"],
+    "attacker":    ["attacker"],
+    "ioc":         ["ioc"]
+  }
+}
