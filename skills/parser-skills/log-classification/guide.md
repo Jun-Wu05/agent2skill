@@ -102,7 +102,24 @@ python <parser-skills>/log-classification/scripts/classify_finalize.py \
 
 ## 约束与边界
 
-- 特征字段位于**日志头**（而非日志体）的场景 v1 不支持——表现为覆盖率极低；此时与用户商定替代方案（如先用 field-adjust 正则提取到独立字段）
+**格式支持矩阵**（`--format` 只收 `json` / `kv`，各下辖子形态）：
+
+| 支持形态 | 说明 |
+|---|---|
+| 纯 JSON / syslog 头 + JSON | 有 `{...}` 体一律按 json（含 syslog 前缀，无需 marker）；特征字段支持点分嵌套路径 |
+| 纯 KV / syslog 头 + KV | 字段分隔符支持空格/tab/`\|\|`/`\|`/`;`/`,`（单/多字符）；键值分隔符 `=`/`:`；引号值（含空格）不切坏；BOM/零宽/控制字符自动清理 |
+| 声明错的救济 | 字段分隔符零匹配→探针自动改判；键值分隔符零匹配（空白字段时）→对称重试；无效 marker→自动回退整行——全部记 `adjudications` |
+
+**不支持**（遇到时的出路）：
+
+- 特征字段位于**日志头**（而非日志体）——表现为覆盖率归零；与用户商定替代方案（如先用 field-adjust 正则提取到独立字段）
+- 纯定界无 key 结构（固定列位空格分隔、CSV、裸标签体如 `Protocol TCP`）——KV 提取需要 `key<sep>value` 对；混排体可试 `--field-delimit "," --kv-delimit ":"`，带裸 token 的覆盖率会很低
+- CEF / LEEF / XML——未规划入 v1，真实数据有需求再扩展
+- 分号/逗号不是独立格式，但作为 KV 字段分隔符完全支持（`--field-delimit ";"`）
+
+**其他边界**：
+
+- 用户明确指定特征字段时**直接透传、不做二次猜测**，但第 3 步统计照跑——点错（取值形状像 ID、字段不存在、字段在日志头）会通过 `value_count`/覆盖率/未匹配样本暴露，拿报告回去与用户确认换字段
 - Excel 只读第一张工作表；单元格内换行已清洗为空格，单条日志不会被拆散
 - 产物同名直接覆盖；不原地覆盖输入文件
 - 三份 JSON 的完整字段说明见 [references/classification_schema.md](references/classification_schema.md)
