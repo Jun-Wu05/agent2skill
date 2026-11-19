@@ -218,6 +218,12 @@ class MappingExcludedTest(unittest.TestCase):
         for name in standard_catalog.MAPPING_EXCLUDED_STANDARD_FIELDS:
             self.assertIsNotNone(catalog.lookup(name), name)
 
+    def test_input_side_excluded_indices(self):
+        self.assertEqual(
+            set(standard_catalog.MAPPING_EXCLUDED_INDICES),
+            {"original_log", "日志类型", "事件名称", "事件级别"},
+        )
+
 
 class EnumShortCircuitTest(unittest.TestCase):
     @classmethod

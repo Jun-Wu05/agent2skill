@@ -38,6 +38,13 @@ MAPPING_EXCLUDED_STANDARD_FIELDS = frozenset(
     {"事件名称", "事件级别", "日志类型", "威胁类型"}
 )
 
+#: 输入侧排除索引：这些 normalize[].index 不参与字段映射（original_log 为审计
+#: 锚点、日志类型由分类链路写入、事件名称/事件级别由事件标注链路写入）。与
+#: MAPPING_EXCLUDED_STANDARD_FIELDS（目标侧）成对，方向不同、成员不同。
+MAPPING_EXCLUDED_INDICES = frozenset(
+    {"original_log", "日志类型", "事件名称", "事件级别"}
+)
+
 _ASSETS_DIR = Path(__file__).resolve().parents[3] / "assets"
 _STANDARD_FIELDS_NAME = "标准字段.txt"
 _SYNONYMS_NAME = "field_synonyms.json"
