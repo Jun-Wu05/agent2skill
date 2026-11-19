@@ -1,0 +1,103 @@
+# field-mapping JSON 契约
+
+四个契约文件 + stdout 摘要的字段说明。脚本对缺失可选字段的容忍度：mappings.json 的 `standard` 缺省视为「未匹配」；其余输入文件字段由脚本严格校验。
+
+## 1. candidates.json（脚本①产物，判定输入）
+
+```json
+{
+  "fields": [
+    {
+      "field": "src_ip",
+      "enum_short_circuit": null,
+      "value_profiles": [
+        {
+          "owner": "主机登录_kv_子规则",
+          "source": "excel",
+          "scanned_lines": 10000,
+          "hit_lines": 1206,
+          "empty_count": 0,
+          "distinct_count": 843,
+          "values": {"1.2.3.4": 3, "10.0.0.1": 2}
+        }
+      ],
+      "candidates": [
+        {
+          "name": "源地址",
+          "score": 1.0,
+          "field_name": "src_address",
+          "by_stripped": "",
+          "object": "流量,登录",
+          "type": "IP",
+          "description": "",
+          "enum_whitelist": []
+        }
+      ]
+    }
+  ]
+}
+```
+
+| 字段 | 说明 |
+|---|---|
+| `fields[].field` | 待映射原始字段名（跨子规则 first-seen 保序；已映射与排除索引不出现） |
+| `enum_short_circuit` | `null` 或 `{"standard": "HTTP请求方法", "source": "exact\|synonym"}`——非空表示确定性命中，**跳过判定**，收口自动填 |
+| `value_profiles[]` | 按 owner（子规则/规则名）分组的值画像；`source`：`excel`（全量日志）/ `sample`（白板样本）/ `config_preview`（A6 预览值）；`values` 为计数降序前 10 |
+| `candidates[]` | Top-K（缺省 10，`--top-k` 可调）候选；`score` 1.0=精确层命中；`by_stripped` 非空表示经去前缀变体命中；黑名单四字段（事件名称/事件级别/日志类型/威胁类型）不出现在任何候选 |
+
+## 2. mappings.json（宿主 agent 判定产物，收口输入）
+
+```json
+{
+  "mappings": [
+    {"field": "src_ip", "standard": "源地址"},
+    {"field": "admin_name", "standard": "未匹配"}
+  ],
+  "events": [
+    {"rule_name": "主机登录_kv_子规则", "event_name": "远程登录"}
+  ]
+}
+```
+
+| 规则 | 说明 |
+|---|---|
+| `mappings[].standard` | 该字段候选列表里的中文系统属性名，或字面量 `未匹配`；候选外/目录外/黑名单名会被收口降级为未匹配并记 `sanitized.degraded` |
+| 集合对齐 | 臆造字段名被裁剪（`trimmed`）、遗漏字段回填未匹配（`backfilled`）、重复判定 first-wins（`duplicates`）——均记入 stdout 摘要 |
+| `events[]` | 每条子规则至多一行；`event_name` 须 21 分类名单逐字命中；未知规则名/非法事件名跳过不写（摘要记 `events.unknown_rule` / `events.invalid_event`）；A6 路径无此段 |
+| 裸数组 | mappings.json 顶层数组视为纯 mappings（无 events） |
+
+## 3. B2 产物
+
+**`<输入名>.mapped_subrules.json`**——白板子规则数组，收口后每条：
+
+- 命中判定的 normalize 条目：`field`=标准字段目录规范名、`entity`=目录首个对象、`sim`=true、`core`=false
+- 未匹配/占用冲突败者：`field`/`entity`/`sim`/`core` 置 null（防重新映射残留）
+- 排除索引（original_log / 日志类型）原样保留
+- 事件标注（有判定的子规则）：parser.filter 末尾追加 `{"fields": {"事件名称": ..., "事件级别": ...}, "name": "addFields", "id": ""}`；normalize 末尾追加事件名称/事件级别两条目（EQUAL 恒等映射；级别 `value` 写码值、`result` 保持显示值，长度按该子规则样本数）
+
+**`<输入名>.entry_rules.json`**——单元素数组（一条入口规则）：
+
+- `name`：`{厂商}_{产品}_通用_入口规则{MMDD}`；parser 按 log_format 五分支配置（纯JSON：json + conditionMatch + 日志类型映射；syslog+JSON：orgRegex + conditionMatch；纯KV：delimitWithKeyMap + 日志类型映射 + kv conditionMatch；syslog+KV：orgRegex + conditionMatch；其余：orgRegex + redirect）
+- `sample`：各 logtype 样本以 `#next#` 连接；normalize 预置 original_log（result=样本列表），纯 JSON/纯 KV 另有「日志类型」占位条目
+- `properties`：日志类型（log_type）+ 解析规则链（rule_name_list）+ 数据源三声明（product / log_vendor / data_source）；数据源固定值绑定 addFields 追加在 filter 末尾
+- 入口规则本身不含字段映射
+
+## 4. A6 产物
+
+**`<输入名>.mapped_config.json`**——原配置数组（递归遍历所有 normalize）：
+
+- 只写 index 命中判定**且原 field 为空**的条目；既有映射（field 非空）原样保留
+- 未匹配条目保持原样（field 仍为空）；排除索引不动
+
+## 5. stdout 摘要（两路径共用字段）
+
+| 字段 | 说明 |
+|---|---|
+| `field_count` / `matched` / `unmatched` | 待映射字段数与裁决后匹配/未匹配计数 |
+| `enum_short_circuited` | 枚举短路字段数；`enum_overridden` 列出 agent 也误判了而被短路覆盖的字段 |
+| `sanitized` | `{trimmed, backfilled, degraded, duplicates}`；`degraded` 元素含 `reason`（映射目标黑名单 / 目录外名称 / 候选外） |
+| `conflicts` | 占用冲突组：`{standard, winner, winner_source(existing\|candidate), losers[]}` |
+| `events`（仅 B2） | `{annotated, unknown_rule[], invalid_event[]}` |
+| `output` / `export` | 结果 JSON 与 Base64 导出路径；B2 另有 `entry_output` / `entry_export` |
+
+**错误码**：`config_required`（规则文件缺失）/ `input_required`（判定/分类文件缺失）/ `invalid_config`（规则文件非数组）/ `invalid_input`（路径互斥缺失、契约不符、没有待映射字段、日志头+KV 缺 feature_identifier、厂商/产品缺失）。
