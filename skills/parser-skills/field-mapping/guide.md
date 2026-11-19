@@ -34,7 +34,9 @@ python <parser-skills>/field-mapping/scripts/mapping_candidates.py \
 
 产出 `<输入名>.subrules.candidates.json`：每个待映射字段的 Top-10 候选（附分数/英文名/对象/类型/描述/枚举白名单）+ 值画像（`--excel` 给了用全量日志，否则用白板自带样本）+ 枚举短路标记。
 
-**完成判据**：stdout `status: success`；`field_count` 与白板字段数一致。报「没有待映射字段」说明全部已映射或属排除索引——如实告知用户即可。
+**完成判据**：stdout `status: success`；`field_count` 与白板字段数一致。全部已映射或属排除索引时**成功跳过**（空候选单、`field_count: 0`）——如实告知用户即可。
+
+> `--top-k` 若在阶段①改过，收口（第 4 步）必须传相同值（缺省同为 10）——收口按开单的候选集校验「候选外」降级。
 
 ### 第 3 步：语义判定，写 mappings.json
 
@@ -90,7 +92,7 @@ python <parser-skills>/field-mapping/scripts/mapping_finalize.py \
 
 ## A6 流程（三步）
 
-1. `python <parser-skills>/field-mapping/scripts/mapping_candidates.py --config <配置文件>`（值画像用配置 normalize 预览值；报「没有待映射字段」= 全部已映射，如实告知）
+1. `python <parser-skills>/field-mapping/scripts/mapping_candidates.py --config <配置文件>`（值画像用配置 normalize 预览值；全部已映射时成功跳过——空候选单，如实告知）
 2. 同 B2 第 3 步写 mappings.json（**只写 mappings 段，无 events**——A6 不做事件标注）
 3. `python <parser-skills>/field-mapping/scripts/mapping_finalize.py --config <配置文件> --mappings mappings.json`
 
@@ -115,4 +117,4 @@ python <parser-skills>/field-mapping/scripts/mapping_finalize.py \
 
 ## 错误码
 
-`config_required`（规则文件缺失）/ `input_required`（判定/分类文件缺失）/ `invalid_config`（规则文件非数组）/ `invalid_input`（路径参数互斥缺失、mappings 契约不符、分类结果非对象、没有待映射字段、日志头+KV 缺正则、厂商/产品缺失），失败退出码 1，stdout JSON 报告。
+`config_required`（规则文件缺失）/ `input_required`（判定/分类文件缺失）/ `invalid_config`（规则文件非数组）/ `invalid_input`（路径参数互斥缺失、mappings 契约不符、分类结果非对象、日志头+KV 缺正则、厂商/产品缺失），失败退出码 1，stdout JSON 报告。全部已映射时**不报错**——成功跳过（见各流程步）。

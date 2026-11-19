@@ -498,16 +498,10 @@ def make_kv_condition_match_filter(
 def make_syslog_kv_condition_match_filter(logtypes: List[str]) -> Dict[str, Any]:
     """syslog+KV 入口规则的 conditionMatch filter。
 
-    每个 case 的 value 格式固定为 ``original_log like '{logtype}'``。
+    与纯 JSON 形态逐字段一致（value 均为 ``original_log like '{logtype}'``），
+    语义名保留作调用方分支标识。
     """
-    cases = [
-        _make_case(
-            f"original_log like '{logtype}'",
-            {"fields": {"1": "1"}, "name": "addFields", "id": ""},
-        )
-        for logtype in logtypes
-    ]
-    return {"cases": cases, "default": {"name": "none"}, "name": "conditionMatch", "id": ""}
+    return make_condition_match_filter(logtypes)
 
 
 # ---------------------------------------------------------------------------
@@ -636,8 +630,11 @@ def _make_entry_properties(logtypes: List[str], rule_name: str) -> List[Dict[str
     ]
 
 
-def _detect_entry_format(classification: Dict[str, Any]):
-    """按分类结果判定入口规则格式分支（返回四个布尔）。"""
+def detect_entry_format(classification: Dict[str, Any]):
+    """按分类结果判定入口规则格式分支（返回 is_json/is_syslog_json/is_pure_kv/is_syslog_kv）。
+
+    开单/收口/子规则生成共用的唯一格式判定，禁止在调用方内联复写。
+    """
     log_format = (classification.get("log_format", "") or "").upper()
     format_detail = classification.get("log_format_detail", "") or ""
     is_json = "JSON" in log_format
@@ -682,7 +679,7 @@ def generate_entry_rule(
     rule["lasttime"] = ts
     rule["parser"]["subResolver"] = 0
 
-    is_json, is_syslog_json, is_pure_kv, is_syslog_kv = _detect_entry_format(
+    is_json, is_syslog_json, is_pure_kv, is_syslog_kv = detect_entry_format(
         classification
     )
     feature_field = classification.get("feature_field", "")

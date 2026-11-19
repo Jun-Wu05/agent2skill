@@ -60,7 +60,11 @@ from _shared.mapping_apply import (
     resolve_occupancy_conflicts,
     sanitize_decisions,
 )
-from _shared.rule_gen import RuleSourceFields, generate_entry_rule
+from _shared.rule_gen import (
+    RuleSourceFields,
+    detect_entry_format,
+    generate_entry_rule,
+)
 
 
 def _print_error(code: str, message: str) -> int:
@@ -200,9 +204,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             return err
         if not isinstance(classification, dict):
             return _print_error("invalid_input", "分类结果必须是 JSON 对象")
-        log_format = (classification.get("log_format", "") or "").upper()
-        format_detail = classification.get("log_format_detail", "") or ""
-        if "KV" in log_format and "日志头" in format_detail and not classification.get("feature_identifier"):
+        _, _, _, is_syslog_kv = detect_entry_format(classification)
+        if is_syslog_kv and not classification.get("feature_identifier"):
             return _print_error(
                 "invalid_input",
                 "日志头+KV 格式的入口规则需要日志头正则（feature_identifier），"
@@ -213,11 +216,6 @@ def main(argv: Optional[List[str]] = None) -> int:
         rules = collect_config_rules(entities)
 
     expected = collect_expected_fields(rules)
-    if not expected:
-        return _print_error(
-            "invalid_input",
-            "没有待映射字段：全部已映射或属于排除索引（既有映射保留不动）",
-        )
 
     try:
         catalog = standard_catalog.load_catalog()
@@ -282,10 +280,16 @@ def main(argv: Optional[List[str]] = None) -> int:
             kind="mappedconfig_mainrules",
         )
 
+        skip_note = (
+            "没有待映射字段（全部已映射或属排除索引，既有映射保留）——"
+            if not expected
+            else ""
+        )
         payload = {
             "status": "success",
             "message": (
-                f"待映射字段 {len(expected)} 个：匹配成功 {matched}、"
+                skip_note
+                + f"待映射字段 {len(expected)} 个：匹配成功 {matched}、"
                 f"未匹配 {len(expected) - matched}（枚举短路 {len(auto)} 个、"
                 f"占用冲突 {len(conflicts)} 组）；事件标注 {len(judgments)} 条子规则；"
                 f"入口规则已生成"
@@ -315,10 +319,16 @@ def main(argv: Optional[List[str]] = None) -> int:
             updated, output, make_export=not args.no_export,
             kind="fieldmapped_config",
         )
+        skip_note = (
+            "没有待映射字段（全部已映射或属排除索引，既有映射保留）——"
+            if not expected
+            else ""
+        )
         payload = {
             "status": "success",
             "message": (
-                f"待映射字段 {len(expected)} 个：匹配成功 {matched}、"
+                skip_note
+                + f"待映射字段 {len(expected)} 个：匹配成功 {matched}、"
                 f"未匹配 {len(expected) - matched}（枚举短路 {len(auto)} 个、"
                 f"占用冲突 {len(conflicts)} 组）；既有映射保留不动"
             ),

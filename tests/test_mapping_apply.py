@@ -159,8 +159,8 @@ class OccupancyTest(unittest.TestCase):
         self.assertEqual(decisions["src_ip"].system_property_name, "源地址")
         self.assertEqual(conflicts, [])
 
-    def test_exact_hit_beats_score_then_row_order(self):
-        # dst_ip 精确命中目的地址（1.0）；client_ip 词法弱命中 → dst_ip 胜
+    def test_score_beats_zero_score_then_row_order(self):
+        # dst_ip 对目的地址有词法分；client_ip 零分 → dst_ip 胜
         decisions = {
             "client_ip": self._decision("目的地址"),
             "dst_ip": self._decision("目的地址"),
@@ -172,6 +172,37 @@ class OccupancyTest(unittest.TestCase):
         self.assertIsNone(decisions["client_ip"])
         self.assertEqual(conflicts[0]["winner"], "dst_ip")
         self.assertEqual(conflicts[0]["winner_source"], "candidate")
+
+    def test_exact_layer_beats_full_jaccard_lexical(self):
+        # 回归：词法层 jaccard 满分的候选分数同为 1.0，精确层标志（exact）
+        # 必须压过它——按分数反推会把两者都判成精确层、退化成行序裁决
+        catalog = standard_catalog.StandardFieldCatalog(
+            [
+                standard_catalog.StandardField(
+                    system_property_name="源地址",
+                    category="基础属性",
+                    field_name="src_address",
+                    data_type="IP",
+                    description="",
+                    enum_values="",
+                    objects="流量",
+                )
+            ],
+            {},
+            {},
+        )
+        retriever = CandidateRetriever(catalog)
+        decisions = {
+            "address_src": catalog.lookup("源地址"),  # 词法 jaccard=1.0，非精确层
+            "src_address": catalog.lookup("源地址"),  # 精确层命中
+        }
+        decisions, conflicts = resolve_occupancy_conflicts(
+            decisions, ["address_src", "src_address"], {}, retriever
+        )
+        self.assertEqual(conflicts[0]["winner"], "src_address")
+        self.assertEqual(conflicts[0]["losers"], ["address_src"])
+        self.assertEqual(decisions["src_address"].system_property_name, "源地址")
+        self.assertIsNone(decisions["address_src"])
 
     def test_row_order_breaks_score_tie(self):
         # 两个都非精确的弱命中同分 → 原行序（expected 顺序）先者胜

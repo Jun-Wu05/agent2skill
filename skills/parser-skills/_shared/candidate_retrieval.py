@@ -52,6 +52,7 @@ class Candidate:
     score: float
     field_name: str
     by_stripped: str
+    exact: bool
     object: str
     data_type: str
     description: str
@@ -229,8 +230,9 @@ class CandidateRetriever:
         query_tokens: set[str] = set()
         query_expanded: set[str] = set()
         for name in effective_names:
-            query_expanded.update(expand_field_name(name, self._synonyms).split())
-            query_tokens.update(expand_field_name(name, self._synonyms).split())
+            expanded_tokens = set(expand_field_name(name, self._synonyms).split())
+            query_expanded.update(expanded_tokens)
+            query_tokens.update(expanded_tokens)
             query_tokens.update(generate_field_tags(name, self._tag_rules))
             query_tokens.update(collect_zh_synonyms(name, self._synonyms))
         compact_query = compact_field_name(field_name)
@@ -282,6 +284,7 @@ class CandidateRetriever:
                     score=round(info["score"], 4),
                     field_name=field.field_name,
                     by_stripped=info["by_stripped"],
+                    exact=info["tier"] == 0,
                     object=field.objects,
                     data_type=field.data_type,
                     description=field.description,

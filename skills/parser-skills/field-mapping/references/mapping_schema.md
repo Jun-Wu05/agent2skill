@@ -43,7 +43,7 @@
 | `fields[].field` | 待映射原始字段名（跨子规则 first-seen 保序；已映射与排除索引不出现） |
 | `enum_short_circuit` | `null` 或 `{"standard": "HTTP请求方法", "source": "exact\|synonym"}`——非空表示确定性命中，**跳过判定**，收口自动填 |
 | `value_profiles[]` | 按 owner（子规则/规则名）分组的值画像；`source`：`excel`（全量日志）/ `sample`（白板样本）/ `config_preview`（A6 预览值）；`values` 为计数降序前 10 |
-| `candidates[]` | Top-K（缺省 10，`--top-k` 可调）候选；`score` 1.0=精确层命中；`by_stripped` 非空表示经去前缀变体命中；黑名单四字段（事件名称/事件级别/日志类型/威胁类型）不出现在任何候选 |
+| `candidates[]` | Top-K（缺省 10，`--top-k` 可调，**两阶段须一致**——收口按开单候选集校验「候选外」）候选；`score` 1.0=精确层命中；`by_stripped` 非空表示经去前缀变体命中；黑名单四字段（事件名称/事件级别/日志类型/威胁类型）不出现在任何候选 |
 
 ## 2. mappings.json（宿主 agent 判定产物，收口输入）
 
@@ -100,4 +100,4 @@
 | `events`（仅 B2） | `{annotated, unknown_rule[], invalid_event[]}` |
 | `output` / `export` | 结果 JSON 与 Base64 导出路径；B2 另有 `entry_output` / `entry_export` |
 
-**错误码**：`config_required`（规则文件缺失）/ `input_required`（判定/分类文件缺失）/ `invalid_config`（规则文件非数组）/ `invalid_input`（路径互斥缺失、契约不符、没有待映射字段、日志头+KV 缺 feature_identifier、厂商/产品缺失）。
+**错误码**：`config_required`（规则文件缺失）/ `input_required`（判定/分类文件缺失）/ `invalid_config`（规则文件非数组）/ `invalid_input`（路径互斥缺失、契约不符、日志头+KV 缺 feature_identifier、厂商/产品缺失）。全部已映射时成功跳过（空候选单 / 零匹配产物照常输出），不报错。

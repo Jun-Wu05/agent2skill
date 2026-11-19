@@ -34,9 +34,6 @@ UNMATCHED = "未匹配"
 #: parser.delimit 的语义化转义还原（与 rule_gen.escape_delimit 互逆）。
 _DELIMIT_UNESCAPE = {"\\s": " ", "\\t": "\t"}
 
-#: 精确命中判定的分数线（与候选检索精确层一致）。
-_EXACT_SCORE = 0.999
-
 
 def unescape_delimit(delimit: str) -> str:
     return _DELIMIT_UNESCAPE.get(delimit, delimit)
@@ -126,10 +123,14 @@ def _candidate_score(
     standard_name: str,
     top_k: int,
 ) -> tuple:
-    """查该字段候选列表中目标标准的 (分数, 是否精确层)；不在候选内返回 (0.0, False)。"""
+    """查该字段候选列表中目标标准的 (分数, 是否精确层)；不在候选内返回 (0.0, False)。
+
+    精确层判据用候选的 exact 标志（检索层显式记录），不按分数反推——词法层
+    jaccard 满分的候选分数同为 1.0，按分数判会把它们误升精确层。
+    """
     for candidate in retriever.retrieve(field, top_k):
         if candidate.name == standard_name:
-            return candidate.score, candidate.score >= _EXACT_SCORE
+            return candidate.score, candidate.exact
     return 0.0, False
 
 

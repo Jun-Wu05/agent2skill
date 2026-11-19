@@ -301,11 +301,27 @@ def main(argv: Optional[List[str]] = None) -> int:
         rules = collect_config_rules(entities)
         profiles = build_config_profiles(rules)
 
+    output = (
+        Path(args.output)
+        if args.output
+        else input_path.with_name(input_path.stem + ".candidates.json")
+    )
+
     if not rules:
-        return _print_error(
-            "invalid_input",
-            "没有待映射字段：全部已映射或属于排除索引（既有映射保留不动）",
+        # 全映射跳过守卫：全部已映射或属排除索引 → 成功跳过（空候选单，既有映射保留）
+        output.write_text(
+            json.dumps({"fields": []}, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
         )
+        payload = {
+            "status": "success",
+            "message": "没有待映射字段：全部已映射或属于排除索引——跳过开单（既有映射保留）",
+            "output": str(output),
+            "field_count": 0,
+            "enum_short_circuited": 0,
+        }
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0
 
     try:
         catalog = standard_catalog.load_catalog()
@@ -316,11 +332,6 @@ def main(argv: Optional[List[str]] = None) -> int:
         rules, profiles, catalog, args.top_k
     )
 
-    output = (
-        Path(args.output)
-        if args.output
-        else input_path.with_name(input_path.stem + ".candidates.json")
-    )
     output.write_text(
         json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )

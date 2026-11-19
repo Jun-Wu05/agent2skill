@@ -461,11 +461,20 @@ class CliTest(unittest.TestCase):
             [c["name"] for c in document["fields"][0]["candidates"]],
         )
 
-    def test_all_mapped_config_reports_no_fields(self):
+    def test_all_mapped_config_skips_with_empty_document(self):
+        # 全映射跳过守卫：成功跳过（空候选单），既有映射保留——幂等重跑友好
         sample = ROOT / "testdata" / "sample_config.json"
-        code, stdout = self._run(["--config", str(sample)])
-        self.assertEqual(code, 1)
-        self.assertIn("invalid_input", stdout)
+        code, stdout = self._run(
+            ["--config", str(sample), "--output", str(self._tmp / "out.candidates.json")]
+        )
+        self.assertEqual(code, 0)
+        payload = json.loads(stdout)
+        self.assertEqual(payload["status"], "success")
+        self.assertEqual(payload["field_count"], 0)
+        document = json.loads(
+            Path(payload["output"]).read_text(encoding="utf-8")
+        )
+        self.assertEqual(document, {"fields": []})
 
     def test_missing_mode_invalid_input(self):
         code, stdout = self._run([])

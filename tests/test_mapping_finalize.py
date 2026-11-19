@@ -422,15 +422,23 @@ class ErrorContractTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("feature_identifier", stdout)
 
-    def test_all_mapped_reports_no_fields(self):
+    def test_all_mapped_skips_successfully(self):
+        # 全映射跳过守卫：成功跳过（零匹配产物照常输出），既有映射保留
         config = self._write(
             "config.json",
             [{"name": "a", "normalize": [_entry("src_ip", field="源地址")]}],
         )
         mappings = self._write("m.json", {"mappings": []})
         code, stdout = self._run(["--config", str(config), "--mappings", str(mappings)])
-        self.assertEqual(code, 1)
-        self.assertIn("没有待映射字段", stdout)
+        self.assertEqual(code, 0)
+        payload = json.loads(stdout)
+        self.assertEqual(payload["status"], "success")
+        self.assertEqual(payload["field_count"], 0)
+        self.assertIn("没有待映射字段", payload["message"])
+        updated = json.loads(Path(payload["output"]).read_text(encoding="utf-8"))
+        self.assertEqual(
+            updated[0]["normalize"][0]["field"], "源地址"
+        )
 
 
 if __name__ == "__main__":
