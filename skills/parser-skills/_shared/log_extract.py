@@ -267,3 +267,116 @@ def derive_separator_candidates(logs_str: str, max_lines: int = 50) -> List[str]
         if not char.isalnum() and char not in _DERIVED_SEPARATOR_EXCLUDE
     )
     return [char for char, count in freq.most_common(8) if count >= 2 * len(lines)]
+
+
+# ---------------------------------------------------------------------------
+# 引号/括号感知的 KV 全键提取（照工作台 rule_generator/utils.py 状态机复刻）
+# ---------------------------------------------------------------------------
+
+_DELIMIT_MAP = {"space": " ", "comma": ",", "semicolon": ";", "tab": "\t"}
+
+
+def _split_kv_segments(text: str, delimit: str = " ", tab: str = "=") -> List[str]:
+    """按字段分隔符拆分 KV 文本为 segment 列表（引号/括号感知）。
+
+    仅在「深度全 0 且不在任何引号内」时分隔符视为字段边界；引号内的
+    转义、方括号/花括号嵌套内的分隔符均不切分。
+
+    与工作台的差异（记录在案）：支持多字符字段分隔符（如 "||"）——
+    工作台逐字符比较 ``ch == delimit``，多字符分隔符永不切分。
+    """
+    actual_delimit = _DELIMIT_MAP.get(delimit.lower(), delimit)
+    is_space_delimit = actual_delimit == " "
+    delim_len = len(actual_delimit)
+
+    segments: List[str] = []
+    current: List[str] = []
+    in_double_quote = False
+    in_single_quote = False
+    bracket_depth = 0
+    brace_depth = 0
+    prev_escape = False
+
+    i = 0
+    total = len(text)
+    while i < total:
+        ch = text[i]
+        if prev_escape:
+            current.append(ch)
+            prev_escape = False
+            i += 1
+            continue
+        if ch == "\\" and (in_double_quote or in_single_quote):
+            current.append(ch)
+            prev_escape = True
+            i += 1
+            continue
+        if ch == '"' and not in_single_quote:
+            in_double_quote = not in_double_quote
+            current.append(ch)
+            i += 1
+            continue
+        if ch == "'" and not in_double_quote:
+            in_single_quote = not in_single_quote
+            current.append(ch)
+            i += 1
+            continue
+        if not in_double_quote and not in_single_quote:
+            if ch == "[":
+                bracket_depth += 1
+            elif ch == "]":
+                bracket_depth = max(0, bracket_depth - 1)
+            elif ch == "{":
+                brace_depth += 1
+            elif ch == "}":
+                brace_depth = max(0, brace_depth - 1)
+        at_depth_zero = (
+            bracket_depth == 0 and brace_depth == 0
+            and not in_double_quote and not in_single_quote
+        )
+        if at_depth_zero and (
+            (is_space_delimit and ch.isspace())
+            or (not is_space_delimit and text.startswith(actual_delimit, i))
+        ):
+            segments.append("".join(current))
+            current = []
+            i += delim_len if not is_space_delimit else 1
+            continue
+        current.append(ch)
+        i += 1
+
+    if current:
+        segments.append("".join(current))
+    return segments
+
+
+def extract_kv_pairs(
+    text: str, delimit: str = " ", tab: str = "=",
+) -> List[Tuple[str, str]]:
+    """从 KV 文本提取全部 (key, value) 对（保留重复，供值画像计数）。
+
+    segment 内第一个 tab 之前为 key（去首尾空白），之后为值原样保留；
+    无 tab 的 segment 跳过。
+    """
+    pairs: List[Tuple[str, str]] = []
+    for segment in _split_kv_segments(text, delimit, tab):
+        stripped = segment.strip()
+        if not stripped:
+            continue
+        index = stripped.find(tab)
+        if index > 0:
+            key = stripped[:index].strip()
+            if key:
+                pairs.append((key, stripped[index + len(tab):]))
+    return pairs
+
+
+def extract_kv_keys(text: str, delimit: str = " ", tab: str = "=") -> List[str]:
+    """从 KV 文本提取去重后的字段名列表（保持首次出现顺序）。"""
+    keys: List[str] = []
+    seen = set()
+    for key, _value in extract_kv_pairs(text, delimit, tab):
+        if key not in seen:
+            seen.add(key)
+            keys.append(key)
+    return keys

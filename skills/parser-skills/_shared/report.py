@@ -16,6 +16,7 @@ DOWNLOAD_NAME_TEMPLATES: dict[str, str] = {
     # 产物类型 → 文件名模板（{timestamp} 占位），随增量扩充
     "current_config": "current_config_{timestamp}.txt",
     "field_adjusted_config": "fieldadjusted_config_{timestamp}.txt",
+    "unmappedconfig_subrules": "unmappedconfig_subrules_{timestamp}.txt",
 }
 
 _TIMESTAMP_FORMAT = "%Y%m%d_%H%M"

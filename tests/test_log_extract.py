@@ -167,6 +167,28 @@ class AggregateByFieldTest(unittest.TestCase):
         self.assertEqual(result["total_lines"], 2)
 
 
+class ExtractKvKeysTest(unittest.TestCase):
+    def test_basic_keys_deduped_in_order(self):
+        keys = log_extract.extract_kv_keys("type=a src=1.1.1.1 type=a port=22", " ", "=")
+        self.assertEqual(keys, ["type", "src", "port"])
+
+    def test_quoted_value_not_split(self):
+        keys = log_extract.extract_kv_keys('msg="failed login" type=block', " ", "=")
+        self.assertEqual(keys, ["msg", "type"])
+
+    def test_bracket_content_not_split(self):
+        keys = log_extract.extract_kv_keys("tree=[{a=1 b=2}] src=1.1.1.1", " ", "=")
+        self.assertEqual(keys, ["tree", "src"])
+
+    def test_custom_delimiters(self):
+        keys = log_extract.extract_kv_keys("type:attack||src:1.1.1.1||port:22", "||", ":")
+        self.assertEqual(keys, ["type", "src", "port"])
+
+    def test_segment_without_tab_skipped(self):
+        keys = log_extract.extract_kv_keys("bare_word type=a", " ", "=")
+        self.assertEqual(keys, ["type"])
+
+
 class CoverageProbeTest(unittest.TestCase):
     def test_kv_key_line_coverage(self):
         logs = "\n".join(["type=a", "type=b", "type=c", "type=d", "other"])
