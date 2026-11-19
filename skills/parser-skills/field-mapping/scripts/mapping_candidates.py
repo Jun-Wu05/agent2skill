@@ -39,85 +39,21 @@ from _shared.candidate_retrieval import DEFAULT_TOP_K, CandidateRetriever
 from _shared.config_io import ConfigIOError, load_entities
 from _shared.log_extract import KvValueExtractor, extract_json_body, extract_json_value
 from _shared.log_input import LogInputError, load_log_table
+from _shared.mapping_apply import (  # noqa: F401  再导出供测试与下游引用
+    collect_config_rules,
+    collect_subrule_rules,
+    mappable_indexes,
+)
 from _shared.rule_gen import value_to_str
 
 #: 每个值画像保留的去重值上限（按计数降序、值字典序）。
 _MAX_PROFILE_VALUES = 10
-
-#: parser.delimit 的语义化转义还原（与 rule_gen.escape_delimit 互逆）。
-_DELIMIT_UNESCAPE = {"\\s": " ", "\\t": "\t"}
 
 _SUPPORTED_EXCEL_PARSERS = ("json", "delimitWithKeyMap")
 
 
 def _print_error(code: str, message: str) -> int:
     return skill_report.print_error(code, message)
-
-
-def _unescape_delimit(delimit: str) -> str:
-    return _DELIMIT_UNESCAPE.get(delimit, delimit)
-
-
-def mappable_indexes(entity: dict) -> List[str]:
-    """entity normalize 中参与字段映射的原始字段名（保序去重）。
-
-    已有映射（field 非空）与输入侧排除索引跳过；已映射条目由收口阶段原样保留。
-    """
-    indexes: List[str] = []
-    for entry in entity.get("normalize") or []:
-        index = entry.get("index")
-        if not index or not isinstance(index, str):
-            continue
-        if entry.get("field") not in (None, ""):
-            continue
-        if index in standard_catalog.MAPPING_EXCLUDED_INDICES:
-            continue
-        if index not in indexes:
-            indexes.append(index)
-    return indexes
-
-
-def collect_subrule_rules(entities: list) -> List[dict]:
-    """B2：白板子规则 → 开单规则集（owner / 字段 / 解析器 / 样本）。"""
-    rules: List[dict] = []
-    for entity in entities:
-        fields = mappable_indexes(entity)
-        if not fields:
-            continue
-        parser = entity.get("parser") or {}
-        rules.append(
-            {
-                "owner": str(entity.get("name", "") or ""),
-                "fields": fields,
-                "parser_name": str(parser.get("name", "") or ""),
-                "tab": str(parser.get("tab", "=") or "="),
-                "delimit": _unescape_delimit(str(parser.get("delimit", " ") or " ")),
-                "sample": entity.get("sample") or "",
-            }
-        )
-    return rules
-
-
-def collect_config_rules(entities: list) -> List[dict]:
-    """A6：配置 → 开单规则集（值画像用 normalize[].result 预览值）。"""
-    rules: List[dict] = []
-    for entity in entities:
-        fields = mappable_indexes(entity)
-        if not fields:
-            continue
-        results: Dict[str, list] = {}
-        for entry in entity.get("normalize") or []:
-            index = entry.get("index")
-            if index in fields and index not in results:
-                results[index] = list(entry.get("result") or [])
-        rules.append(
-            {
-                "owner": str(entity.get("name", "") or ""),
-                "fields": fields,
-                "results": results,
-            }
-        )
-    return rules
 
 
 # ---------------------------------------------------------------------------
