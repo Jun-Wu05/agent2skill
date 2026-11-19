@@ -1,10 +1,10 @@
 ---
 name: parser-skills
-description: 解析规则技能集 - 日志解析规则（Base64 配置/JSON/TXT）与日志数据的统一处理入口，涵盖字段调整（添加/删除/合并/base64 解码/正则提取字段）、日志类型提取、标准字段映射、枚举提取与填充、威胁类型映射。当用户说"添加字段、新增字段、删除字段、移除字段、合并字段、base64 解码、解码字段、正则提取、从某字段提取X、字段映射、映射到标准字段、日志类型、把X当作日志类型、区分日志类型、提取枚举值、枚举填充、威胁类型、导出Base64配置"等解析规则操作时使用。当前已实现【字段调整五子命令】【日志类型提取】，其余功能按计划交付中。
+description: 解析规则技能集 - 日志解析规则（Base64 配置/JSON/TXT）与日志数据的统一处理入口，涵盖字段调整（添加/删除/合并/base64 解码/正则提取字段）、日志类型提取、标准字段映射、枚举提取与填充、威胁类型映射。当用户说"添加字段、新增字段、删除字段、移除字段、合并字段、base64 解码、解码字段、正则提取、从某字段提取X、字段映射、映射到标准字段、填白板、日志类型、把X当作日志类型、区分日志类型、提取枚举值、枚举填充、威胁类型、导出Base64配置"等解析规则操作时使用。当前已实现【字段调整五子命令】【日志类型提取】【标准字段映射】，其余功能按计划交付中。
 license: MIT
 metadata:
-  version: "0.8.1"
-  status: 字段调整-添加/删除/合并/base64 解码/正则提取字段、日志类型提取已实现；其余子模块交付中
+  version: "0.9.0"
+  status: 字段调整-添加/删除/合并/base64 解码/正则提取字段、日志类型提取、标准字段映射（白板路径 + 现成配置补映射 + 入口规则 + 事件标注）已实现；其余子模块交付中
 ---
 
 # 解析规则技能集（parser-skills）
@@ -17,7 +17,7 @@ metadata:
 |---|---|---|---|
 | 添加字段 / 新增字段 / 插入字段；设置事件名称；删除字段 / 移除字段；合并字段 / 把 X 和 Y 合并；base64 解码 / 解码字段；正则提取 / 从某字段提取 X | **field-adjust**（字段调整） | ✅ 添加/删除/合并/base64 解码/正则提取可用 | [field-adjust/guide.md](field-adjust/guide.md)，脚本 `field-adjust/scripts/` |
 | 日志类型 / 把 X 当作日志类型 / 区分日志类型 / 从日志数据生成解析规则 | **log-classification**（日志类型提取） | ✅ 特征统计 + 分类收口 + 白板子规则可用 | [log-classification/guide.md](log-classification/guide.md)，脚本 `log-classification/scripts/` |
-| 字段映射 / 映射到标准字段 / X 映射到 Y（填白板、生成完整规则） | field-mapping（标准字段映射） | 交付中（以 log-classification 白板产物为输入） | — |
+| 字段映射 / 映射到标准字段 / X 映射到 Y（填白板、生成完整规则） | **field-mapping**（标准字段映射） | ✅ 候选开单 + 收口（白板路径 / 现成配置双路径）+ 入口规则 + 事件标注可用 | [field-mapping/guide.md](field-mapping/guide.md)，脚本 `field-mapping/scripts/` |
 | 提取 X 的枚举值 / 填充 / 取消映射 | enum-mapping（枚举提取与填充） | 交付中 | — |
 | 威胁类型 / 映射到威胁类型 | threat-type（威胁类型链路） | 交付中 | — |
 
@@ -33,10 +33,11 @@ metadata:
 - **输入**：配置族文件（Base64 txt / 原生 JSON / TXT，内容为 mapping entities 的 JSON 数组，自动识别解码）或日志数据文件（Excel，第一张工作表须含「原始日志」列）
 - **输出**：修改/生成类操作运行后即产出——①结果 JSON（子模块间文件衔接的产物，如 `<输入名>.modified.json` / `.subrules.json`）②平台可导入的 Base64 文件（命名兼容平台下载契约，如 `fieldadjusted_config_YYYYMMDD_HHMM.txt` / `unmappedconfig_subrules_YYYYMMDD_HHMM.txt`）③stdout JSON 摘要（`status` / `message` / 产物路径）
 - **不原地覆盖输入文件**；错误码稳定（`config_required` / `input_required` / `invalid_config` / `invalid_input` / `field_conflict` / `invalid_event_name` / `event_level_conflict` / `reserved_field_rejected` / `rule_name_not_found` / `event_annotation_required` / `field_reference_conflict` / `field_not_found` / `invalid_pattern` / `pattern_mismatch` 等），失败退出码 1
-- **共享底座 `_shared/`**：config_io.py（配置族解码/编码）、log_input.py（Excel 数据族读取）、log_extract.py（JSON/KV 特征提取与聚合）、rule_gen.py（规则骨架与装配）、report.py（统一输出与导出命名）、event_binding.py（事件名称 21 分类绑定表）、entity_scope.py（target/group 寻址解析）、field_policy.py（系统保留字段）、cli.py（field-adjust 子命令 CLI 骨架）——子模块脚本共用，禁止复制
+- **共享底座 `_shared/`**：config_io.py（配置族解码/编码）、log_input.py（Excel 数据族读取）、log_extract.py（JSON/KV 特征提取与聚合）、rule_gen.py（规则骨架与装配）、standard_catalog.py（标准字段目录与枚举短路）、candidate_retrieval.py（词法候选检索）、mapping_apply.py（映射收口底座）、report.py（统一输出与导出命名）、event_binding.py（事件名称 21 分类绑定表）、entity_scope.py（target/group 寻址解析）、field_policy.py（系统保留字段）、cli.py（field-adjust 子命令 CLI 骨架）——子模块脚本共用，禁止复制
 - 脚本路径相对本技能基目录 `<parser-skills>` 书写（agent 加载本技能时已知；在源仓库内即 `skills/parser-skills`），不依赖会话 cwd
 
 ## 子模块速览
 
 - **field-adjust**：对解析规则配置做字段增删改（五子命令共用 CLI 骨架，守卫链拦截危险操作，支持按子规则名/威胁组寻址）。用法、参数、守卫与示例见 [field-adjust/guide.md](field-adjust/guide.md)。
 - **log-classification**：Excel 日志表 → agent 判格式与特征字段 → 脚本①全量统计 → agent 语义归类 → 脚本②收口出分类结果 + 白板子规则 + Base64 导出。标准流程五步与判定清单见 [log-classification/guide.md](log-classification/guide.md)。
+- **field-mapping**：白板子规则/配置中的待映射字段 → 脚本①开候选单（Top-10 + 值画像 + 枚举短路）→ agent 逐字段判定与事件名称判定 → 脚本②收口（sanitize + 占用裁决 + 写回 + 入口规则 + 导出）。双路径流程见 [field-mapping/guide.md](field-mapping/guide.md)。

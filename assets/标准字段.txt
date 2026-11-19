@@ -1,0 +1,626 @@
+系统属性名称	属性分类	字段名称	属性类型	描述	枚举值	对象
+AptGUID	基础属性	apt_GUID	字符	apt组织唯一标识特征		APT
+APT组织名	基础属性	apt_group	字符	APT组织的名字		APT
+攻击子技术ID	基础属性	attck_subtechnique_id_list	字符	攻击子技术ID		BAS
+收件箱	基础属性	recipient_address	字符	收件箱		BAS
+攻击战术ID	基础属性	attck_tactics_id_list	字符	攻击战术ID		BAS
+CNNVD编号	基础属性	cnnvd_number	字符	CNNVD编号		BAS
+APT组织名列表	基础属性	apt_group_list	字符	APT组织名列表		BAS
+攻击技术ID	基础属性	attck_techniques_id_list	字符	攻击技术ID		BAS
+样本家族	基础属性	sample_family	字符	样本家族		BAS
+攻击战术	基础属性	attck_tactics_list	字符	攻击战术		BAS
+CVE编号	基础属性	cve_number	字符	CVE编号		BAS
+攻击技战术	基础属性	tactics_techniques_list	字符	攻击技战术		BAS
+CNVD编号	基础属性	cnvd_number	字符	CNVD编号		BAS
+攻击子技术	基础属性	attck_subtechniques_list	字符	攻击子技术		BAS
+WMI类名	基础属性	wmi_class	字符	WMI类名		WMI对象
+WMI消费者名称	基础属性	wmi_consumer_name	字符	WMI消费者名称		WMI对象
+WMI查询语句	基础属性	wmi_query	字符	WMI查询语句		WMI对象
+ARP网卡类型	基础属性	arp_HT	字符	网卡硬件类型，用于标识链路层协议		arp协议
+ARP操作码	基础属性	arp_OP	字符	操作代码，标识ARP数据包类型，1表示请求，2表示回应		arp协议
+ARP网络地址类型	基础属性	arp_PT	字符	协议类型，用于标识网络层协议		arp协议
+DHCP客户端ip地址	基础属性	dhcp_ciaddr	字符	DHCP客户端的IP地址，若客户没有这个信息，该字段为0；		dhcp协议
+DHCP客户端mac地址	基础属性	dhcp_chaddr	字符	DHCP客户端的MAC地址		dhcp协议
+DHCP分配ip地址	基础属性	dhcp_yiaddr	IP	DHCP服务器分配给客户端的IP地址，这是服务器在客户请求下提供的；		dhcp协议
+DHCP服务器名称	基础属性	dhcp_sname	字符	DHCP服务器名称		dhcp协议
+DHCP事务标示符	基础属性	dhcp_xid	字符	DHCP客户端请求标识；事务ID，是个随机数，用于客户和服务器之间匹配请求和相应消息；		dhcp协议
+DHCP操作码	基础属性	dhcp_op	字符	DHCP协议中OP字段，指明流量方向，若是客户端发送给server的包，设为1，反向为2		dhcp协议
+DNS响应记录	基础属性	dns_rr_ans_items	字符	DNS响应资源记录		dns协议
+dns_zero	基础属性	dns_zero	字符	保留字段，在所有的请求和应答报文中值必须为0		dns协议
+dns_RA	基础属性	dns_RA	字符	可用递归标识		dns协议
+DNS响应地址	基础属性	dns_resolved_ip	字符	DNS解析域名对应的 IP 地址		dns协议
+DNS响应类型	基础属性	dns_answer_type	字符	DNS响应类型字段		dns协议
+DNS操作码	基础属性	dns_opcode	字符	DNS操作码		dns协议
+DNS查询类型	基础属性	dns_query_type	字符	DNS查询类型字段		dns协议
+dns_AA	基础属性	dns_AA	字符	授权应答，该字段在响应报文中有效		dns协议
+dns_RD	基础属性	dns_RD	字符	期望递归标识		dns协议
+DNS响应类	基础属性	dns_answer_class	字符	DNS响应类字段		dns协议
+DNS返回码	基础属性	dns_rcode	字符	DNS返回码，表示响应的差错状态		dns协议
+DNS终节点响应	基础属性	dns_rr_data	字符	终节点相应资源记录		dns协议
+DNS响应时间间隔	基础属性	dns_answer_ttl	字符	DNS响应记录的TTL		dns协议
+dns_TC	基础属性	dns_TC	字符	是否被截断标识		dns协议
+DNSQR类型	基础属性	dns_QR	字符	查询请求/响应的标志信息		dns协议
+dns_transaction_id	基础属性	dns_transaction_id	字符	DNS事务ID		dns协议
+DNS查询类	基础属性	dns_query_class	字符	DNS查询类字段		dns协议
+FTP返回码	基础属性	ftp_code	字符	FTP返回码		ftp协议
+FTP命令	基础属性	ftp_cmd	字符	命令的详细内容(包括参数)		ftp协议
+URL	基础属性	http_url_path	字符	http请求的URL		http协议
+HTTP请求内容	基础属性	http_req	字符	http请求的数据包		http协议
+HTTP响应头	基础属性	http_header_response	字符			http协议
+HTTP响应体	基础属性	http_body_response	字符			http协议
+HTTP内容类型	基础属性	http_content_type	字符	http请求中Content-Type字段		http协议
+XFF地址	基础属性	xff_ip	IP	http请求中X-Forwarded-For字段中的第一个IP地址		http协议
+HTTP响应内容	基础属性	http_res	字符	http响应的数据包		http协议
+HTTP协议版本	基础属性	http_ver	字符	http协议版本		http协议
+XFF内容	基础属性	xff_content	字符			http协议
+HTTP响应码	基础属性	http_status	整型	http响应码		http协议
+http_setcookie	基础属性	http_setcookie	字符	http请求中setcookie字段		http协议
+HTTP请求方法	基础属性	http_method	枚举	http的请求方法	CONNECT,DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT,TRACE,其他	http协议
+HTTP请求参数	基础属性	http_req_arg	字符	http请求中的参数		http协议
+HTTP请求长度	基础属性	http_req_length	整型	http请求的长度		http协议
+HTTP用户代理	基础属性	http_ua	字符	User-Agent		http协议
+http_origin	基础属性	http_origin	字符	http请求中Origin字段，与Referer字段类型，但Origin字段里只包含是谁发起的请求，并没有其他信息		http协议
+代理地址	基础属性	proxy_address	IP	代理地址		http协议
+XFF地址列表	基础属性	xff_ip_list	IP	http请求中X-Forwarded-For字段组成的数组		http协议
+HTTP请求路径	基础属性	http_req_path	字符			http协议
+原始请求数据	基础属性	ori_request	字符	原始请求数据		http协议
+XRI地址	基础属性	x_real_ip	IP	客户端真实ip地址		http协议
+HTTP请求体	基础属性	http_body	字符	http请求中的body部分		http协议
+http_cookie	基础属性	http_cookie	字符	http请求中Cookie字段		http协议
+HTTP内容长度	基础属性	http_content_len	整型	http请求中Content-Length字段		http协议
+CDN地址	基础属性	cdn_address	IP	CDN地址		http协议
+XFF端口	基础属性	xff_port	字符	http请求中X-Forwarded-Port字段		http协议
+HTTP主机	基础属性	http_host	字符	http请求中的host字段		http协议
+HTTP引用	基础属性	http_referer	字符	http请求中Referer字段		http协议
+原始响应数据	基础属性	ori_response	字符	原始响应数据		http协议
+HTTP请求头	基础属性	http_header	字符			http协议
+ICMP返回类型	基础属性	icmp_res_type	字符	ICMP返回类型		icmp协议
+ICMP请求校验码	基础属性	icmp_req_checksum	字符	ICMP请求校验码，对整个请求报文的报文信息的校验		icmp协议
+ICMP请求类型	基础属性	icmp_req_type	字符	ICMP请求类型		icmp协议
+ICMP返回内容	基础属性	icmp_res_content	字符	ICMP响应内容		icmp协议
+ICMP返回标识	基础属性	icmp_res_indentifier	字符	ICMP响应报文标识		icmp协议
+ICMP返回码	基础属性	icmp_res_code	字符	ICMP响应码		icmp协议
+ICMP请求长度	基础属性	icmp_req_len	整型	ICMP请求长度		icmp协议
+JA3指纹hash	基础属性	ja3_hash	字符	JA3指纹hash		ja3协议
+JA3指纹	基础属性	ja3_string	字符	JA3指纹		ja3协议
+票据域名	基础属性	krb_ticket_domain	字符	kerberos协议ticket票据中存储的域名		kerberos协议
+LDAP协议版本	基础属性	ldap_ver	字符	LDAP协议版本		ldap协议
+LDAP显示名称	基础属性	ldap_display_name	字符	LDAP显示名称		ldap协议
+LDAP操作码	基础属性	ldap_login_cmdintro	字符	LDAP操作码		ldap协议
+ldap_cn	基础属性	ldap_cn	字符	ldap_cn		ldap协议
+LDAP操作	基础属性	ldap_operation	字符	LDAP操作		ldap协议
+ldap_uri	基础属性	ldap_uri	字符	ldap_uri		ldap协议
+NFS过程	基础属性	nfs_procedure	字符	nfs的操作		nfs协议
+OSPF请求类型	基础属性	ospf_req_type	字符	OSPF协议的请求类型		ospf协议
+OSPF响应类型	基础属性	ospf_rsp_type	字符	OSPF协议的响应类型		ospf协议
+POP3命令码	基础属性	pop3_cmdop	字符	pop3的操作指令		pop3协议
+RDP加密算法	基础属性	rdp_enc_method	字符			rdp协议
+RDP版本	基础属性	rdp_ver	字符	RDP协议版本		rdp协议
+RPC服务端进程路径	基础属性	rpc_server_path	字符	提供RPC服务的服务端进程路径		rpc协议
+RPC客户端进程Pid	基础属性	rpc_client_pid	字符	发起RPC调用的客户端进程PID		rpc协议
+RPC客户端进程路径	基础属性	rpc_client_path	字符	发起RPC调用的客户端进程路径		rpc协议
+RPC服务端进程Pid	基础属性	rpc_serverpid	字符	提供RPC服务的服务端进程PID		rpc协议
+SMB命令	基础属性	smb_cmds	字符			smb协议
+SMB消息id	基础属性	smb_message_id	字符	SMB消息ID		smb协议
+SMB树ID	基础属性	smb_tree_id	字符	SMB树ID		smb协议
+SMB响应	基础属性	smb_res	字符	SMB响应内容		smb协议
+SMB子命令	基础属性	smb_sub_cmd	字符	SMB子命令		smb协议
+SMB协议版本	基础属性	smb_ver	字符	SMB协议版本号		smb协议
+SMB状态	基础属性	smb_status	字符	SMB状态		smb协议
+SMB会话ID	基础属性	smb_session_id	字符	SMB会话ID		smb协议
+SMB状态码	基础属性	smb_status_code	字符	SMB状态码		smb协议
+SSH客户端MAC算法列表	基础属性	ssh_mac_algorithms_cli_to_sev	字符	SSH客户端MAC算法列表		ssh协议
+SSH客户端DH公钥_E	基础属性	ssh_dh_cli_e	字符	SSH客户端DH公钥_E		ssh协议
+SSH客户端秘钥交换算法列表	基础属性	ssh_kex_algorithms	字符	SSH客户端秘钥交换算法列表		ssh协议
+SSH服务端压缩算法列表	基础属性	ssh_compress_algorithms_sev_to_cli	字符	SSH服务端压缩算法列表		ssh协议
+SSH服务端MAC算法列表	基础属性	ssh_mac_algorithms_sev_to_cli	字符	SSH服务端MAC算法列表		ssh协议
+SSH版本	基础属性	ssh_ver	字符	ssh协议的版本		ssh协议
+SSH客户端压缩算法列表	基础属性	ssh_compress_algorithms_cli_to_sev	字符	SSH客户端压缩算法列表		ssh协议
+SSH客户端指纹	基础属性	ssh_fingerprint	字符	SSH客户端指纹		ssh协议
+SSH客户端秘钥协商信息	基础属性	ssh_key_exchange_info	字符	SSH客户端秘钥协商信息		ssh协议
+SSh 服务器DH公钥_F	基础属性	ssh_dh_sev_f	字符	SSh 服务器DH公钥_F		ssh协议
+SSh服务端加密算法列表	基础属性	ssh_encry_algorithms_sev_to_cli	字符	SSh服务端加密算法列表		ssh协议
+SSH客户端加密算法列表	基础属性	ssh_encry_algorithms_cli_to_sev	字符	SSH客户端加密算法列表		ssh协议
+TCP标志	基础属性	tcp_flags	字符	代表TCP协议的标识		tcp协议
+TELNET命令	基础属性	telnet_cmd	字符	telnet执行的命令		telnet协议
+TLS指纹	基础属性	tls_fingerprint	字符	TLS指纹		tls协议
+TLS公钥	基础属性	tls_pubkey	字符	TLS的公钥		tls协议
+TLS协议版本	基础属性	tls_ver	字符	TLS协议的版本		tls协议
+TLS服务名	基础属性	tls_server_name	字符	TLS服务名		tls协议
+TLS证书	基础属性	tls_certificate	字符	TLS证书		tls协议
+TLS主题	基础属性	tls_subject	字符	TLS主题		tls协议
+TLS序列号	基础属性	tls_serial	字符	TLS的序列号		tls协议
+TLS颁发者	基础属性	tls_issuerdn	字符	TLS证书颁发者		tls协议
+TLS证书链	基础属性	tls_chain	字符	TLS证书链		tls协议
+主机MAC地址列表	基础属性	host_mac_list	字符			主机
+目的主机名称	基础属性	dst_host_name	字符			主机
+主机IP列表	基础属性	host_ip_list	字符	多网卡机器上，列出所有IP地址		主机
+主机IP	基础属性	host_ip	IP	主机的IP地址		主机
+操作系统位数	基础属性	os_bit	字符			主机
+源主机名称	基础属性	src_host_name	字符			主机
+计算机组	基础属性	com_group	字符			主机
+主机MAC地址	基础属性	host_mac	字符			主机
+主机GUID	基础属性	host_guid	字符			主机
+主机名称	高级业务属性	host_name	字符			主机
+主机ID	业务属性	client_host_sign	字符			主机
+操作系统内核版本	基础属性	os_kernel_version	字符			主机
+操作系统平台	基础属性	os	枚举	Windows|Linux|MacOS|others	Linux,MacOS,others,Windows	主机
+操作系统补丁	基础属性	os_patch	字符			主机
+工作站点名称	基础属性	workstationname	字符			主机
+操作系统版本	基础属性	os_ver	字符			主机
+原主机IP	基础属性	old_host_ip	IP			主机
+用户名称	业务属性	user_name	字符			主机,登录,用户,数据库,ftp协议,tls协议,ldap协议,telnet协议,oicq协议,ssh协议,安全事件类型,ueba类型
+事件描述	基础属性	event_description	字符	对事件的描述；事件内容、摘要、描述这三个字段均可描述事件，三者无本质区别，提供三个字段是为了从不同维度进行描述；优先级:事件摘要>事件内容>事件描述		事件
+操作描述	基础属性	event_operation_description	字符	对事件操作的描述		事件
+操作名称	基础属性	event_operation_name	字符	记录事件操作的名称		事件
+事件动作	基础属性	event_action	枚举	主要描述安全设备的拦截动作，常见值有：放行|拦截|未知	放行,拦截,未知	事件
+事件计数	基础属性	event_count	字符			事件
+事件标签	基础属性	event_tag	字符	-		事件
+事件类型	基础属性	event_type	字符	安全设备产生对事件(日志内容)的分类，一般用于表示该日志是做哪类事件的		事件
+事件状态	基础属性	event_status	枚举		已完成,未完成,未知	事件
+事件来源链接	基础属性	event_from_url	字符	该链接可以跳转至日志来源设备的界面		事件
+操作类型	基础属性	event_operation_type	枚举	对事件操作的分类，常与行为类事件名称绑定，用于描述事件的操作。	API调用,DcomCallBack,USB接入,上传,下载,休眠,修改,值修改,值删除,值查询,值重命名,停止,关机,关闭,其他,其他属性修改,其他操作,写入,切换,创建,删除,加载,卸载,发送,启动,响应TGS,响应TGT,唤醒,复制,失败,安装,密码修改,导出,已修复,开启,开始,开机,待机,快照,忽略,成功,所属组修改,打印审计,打开,执行,拔出,拦截,挂起,接入,接收,故障,数据库审计,文件夹权限修改,文件权限修改,时间属性修改,更新,未映射,未检测到,权限修改,权限提升,枚举,查杀,查看,查询,检测到,正常,注入,清除,激活,病毒库升级,登出,登录,监听,禁用,移动,移动存储审计,策略修改,管理,篡改,终止,终端入网,绑定,规则库升级,解锁,警告,订阅,认证,设置文件共享,设置文件夹共享,设置文件夹隐藏属性,设置文件隐藏属性,访客入网,访问,请求TGS,请求TGT,读取,超时,载入,进入,远程桌面,连接,重启,重命名,锁定,键创建,键删除,键查询,键重命名,附件下载,项创建,项删除,项查询,项重命名	事件
+原始信息	基础属性	origin_event	字符	记录日志中原始的事件名称		事件
+事件摘要	基础属性	event_title	字符	事件的摘要；事件内容、摘要、描述这三个字段均可描述事件，三者无本质区别，提供三个字段是为了从不同维度进行描述；优先级:事件摘要>事件内容>事件描述		事件
+事件引用链接	基础属性	event_reference_url	字符	关于该事件说明的引用参考链接；		事件
+事件索引	基础属性	event_index	字符	通过事件索引关联其他事件		事件
+事件名称	业务属性	event_name	字符			事件
+事件级别	业务属性	event_level	整型			事件
+事件内容	基础属性	event_content	字符	描述事件的内容；事件内容、摘要、描述这三个字段均可描述事件，三者无本质区别，提供三个字段是为了从不同维度进行描述；优先级:事件摘要>事件内容>事件描述		事件
+事件原因	基础属性	event_reason	字符	事件发生的原因，尤其是错误事件和失败事件发生的原因；		事件
+事件源	基础属性	event_provider	字符	用于终端监测设备、安全告警设备产生告警日志是来源于什么模块、日志等		事件
+事件结果	基础属性	result	枚举	事件的结果；只有'事件'、'威胁'、'攻击'实体存在“结果”相关的字段；	失败,成功,未知	事件,登录
+会话持续时间	基础属性	session_duration_time	字符	会话持续时间		会话
+会话ID	基础属性	session_id	字符	会话ID		会话
+会话状态	基础属性	session_status	字符	会话状态		会话
+省份	基础属性	location_province	字符	省份		位置
+目的国家	基础属性	dst_location_country	字符	目的国家		位置
+纬度	基础属性	location_latitude	字符	维度		位置
+城市	基础属性	location_city	字符	城市		位置
+源城市	基础属性	src_location_city	字符	源城市		位置
+源国家	基础属性	src_location_country	字符	源国家		位置
+源省份	基础属性	src_location_province	字符	源省份		位置
+国家编码	基础属性	location_country_code	字符	国家编码		位置
+经度	基础属性	location_longitude	字符	经度		位置
+源国家编码	基础属性	src_location_country_code	字符	源国家编码		位置
+目的城市	基础属性	dst_location_city	字符	目的城市		位置
+国家	基础属性	location_country	字符	国家		位置
+目的区域	基础属性	dst_location	字符	目的区域		位置
+目的国家编码	基础属性	dst_location_country_code	字符	目的国家编码		位置
+目的省份	基础属性	dst_location_province	字符	目的省份		位置
+源区域	基础属性	src_location	字符	源区域		位置
+域SID	基础属性	domain_sid	字符	domain_sid		域
+源安全域	基础属性	src_ad	字符	src_ad		域
+域信息	基础属性	domain_info	字符	domain_info		域
+域句柄	基础属性	domain_handle	字符	domain_handle		域
+目的域	基础属性	dst_domain	字符	dst_domain		域
+堆栈信息	基础属性	stack_info	字符	堆栈信息		堆栈
+ATTCK技术ID	基础属性	attck_techniques_id	字符			威胁
+威胁特征	基础属性	threat_feature	字符	多记录攻击payload		威胁
+威胁检测引擎ID	基础属性	threat_engine_id	字符	检测设备的引擎ID		威胁
+受害者端口	基础属性	victim_port	整型			威胁
+威胁检测引擎名称	基础属性	threat_engine_name	字符	检测设备的引擎名称		威胁
+威胁等级	基础属性	threat_level	枚举	信息|提醒|警告|严重|致命	严重,信息,提醒,致命,警告	威胁
+威胁规则ID列表	基础属性	threat_rule_id_list	字符			威胁
+威胁名称	基础属性	threat_name	字符	如果威胁信息和威胁类型不够用，这时可以按需使用威胁子类型和威胁名称。		威胁
+ATTCK技战术名称	基础属性	attack_attck	字符			威胁
+攻击结果	基础属性	attack_result	枚举	攻击的结果	攻击成功,攻击失败,未知	威胁
+攻击者组	基础属性	attacker_array	字符			威胁
+威胁规则ID	基础属性	threat_rule_id	字符	用于告警日志里记录检测威胁的ID		威胁
+攻击工具	基础属性	attack_tool	字符	攻击工具		威胁
+威胁信息	基础属性	threat_info	字符	威胁类日志必须解析。一般将原始日志中的告警名称（或其他能够描述告警的简短词句）需要解析为本脑的威胁信息。告警转换类的SAE规则会引用变量威胁信息。		威胁
+威胁数量	基础属性	threat_count	整型	整型，检测威胁事件的合并数量		威胁
+威胁子类型	基础属性	threat_subtype	字符	如果威胁信息和威胁类型不够用，这时可以按需使用威胁子类型和威胁名称。		威胁
+ATTCK技术名称	基础属性	attck_techniques	字符			威胁
+攻击载荷	基础属性	attack_payload	字符			威胁
+攻击者端口	基础属性	attack_port	整型			威胁
+威胁规则名称	基础属性	threat_rule_name	字符	用于告警日志里记录检测威胁的名称		威胁
+威胁规则内容	基础属性	threat_rule	字符	用于告警日志里记录检测威胁的内容		威胁
+威胁分数	基础属性	threat_score	整型			威胁
+受害者地址	基础属性	victim_ip	IP	IPV4/IPV6，受害者地址		威胁
+威胁描述	基础属性	threat_description	字符	描述威胁的内容、危害等信息		威胁
+威胁检测引擎版本	基础属性	threat_engine_version	字符	检测设备的引擎版本		威胁
+攻击链阶段	基础属性	attack_killchain	字符			威胁
+告警设备列表	基础属性	alarm_device_list	字符			威胁
+IOC列表	基础属性	ioc_value_list	字符			威胁
+攻击者	基础属性	attacker	字符	可能是IP、域名、url格式		威胁
+标记	基础属性	sign	字符			威胁
+受害者数量	基础属性	victim_num	整型	检测被攻击的合并数量		威胁
+ATTCK战术ID	基础属性	attck_tactics_id	字符			威胁
+攻击者地址	基础属性	attack_ip	IP	IPV4/IPV6		威胁
+威胁来源	基础属性	threat_from	字符	记录告警日志检测威胁的来源 如威胁情报等		威胁
+威胁场景	基础属性	attack_scene	字符	攻击场景		威胁
+威胁特征列表	基础属性	threat_feature_list	字符			威胁
+ATTCK战术名称	基础属性	attck_tactics	字符			威胁
+威胁处置建议	基础属性	threat_advice	字符	检测威胁的处置建议		威胁
+受害者组	基础属性	victim_array	字符			威胁
+威胁鉴定结果	基础属性	threat_identify_result	字符	检测威胁综合值		威胁
+威胁类型	基础属性	threat_type	枚举	对威胁事件的分类，常与告警类事件名称绑定，用于描述告警的类型。	APT攻击,APT病毒,APT通信,ARP欺骗,BootKit病毒,DGA,DNS欺骗,IP冲突,IP欺骗,RootKit病毒,SQL注入,Webshell,web扫描,web攻击,web爬虫,XSS攻击,下载器投放器,中间人攻击,主机外联,主机扫描,代码执行,会话劫持,信息泄露,僵尸网络,免杀逃逸,共享异常,其他,其他注入,内容变更,内网攻击,勒索病毒,反序列化,反弹shell,可疑操作,可疑连接,后门控制,后门程序,启动项异常,命令执行,命令篡改,垃圾邮件,外部访问,威胁情报,宏病毒,容器异常,密码盗取,密码重置,常规木马,广告程序,应用扫描,异常外联,异常流量,异常访问,弱口令,心跳行为,恶作剧病毒,恶意UA,恶意命令,恶意程序,恶意软件通信,拒绝服务,挖矿木马,敏感信息探测,数据库异常操作,数据泄露,文件上传,文件写入,文件包含,文件外发,文件异常,文件感染型病毒,文件读取,明文密码,暴力破解,服务异常,服务扫描,未授权访问,未映射,本地提权,横向移动,横向访问,沙箱告警,注册表异常,流量代理,漏洞利用,漏洞扫描,漏洞检测,登录异常,目录穿越,目录遍历,破坏性病毒,窃密木马,端口扫描,系统驻留,缓冲区溢出,网站可用性,网络异常,网络扫描,网络钓鱼,网银木马,网页木马,网页篡改,脚本异常,脚本病毒,蠕虫病毒,认证绕过,账号异常,账号状态异常,跨站请求伪造,进程异常,远控木马,远程工具,违规内容,违规外联,违规进程,邮件扫描,配置不当,重放,钓鱼邮件,间谍软件,隐蔽隧道,风险端口访问,驱动异常,高危端口,黑客工具,黑链	威胁,防病毒
+情报恶意家族	基础属性	ti_malcious_family	字符	情报恶意家族		威胁情报
+IOC_MD5值	基础属性	ioc_md5	字符	威胁情报的MD5值		威胁情报
+IOC描述	基础属性	ioc_info	字符	威胁情报的信息名称		威胁情报
+远控类型	基础属性	remote_control_type	字符	远控类型		威胁情报
+IOC值	基础属性	ioc_value	字符	威胁情报的值		威胁情报
+IOC类型	基础属性	ioc_type	字符	威胁情报类型		威胁情报
+容器镜像名称	基础属性	container_image_name	字符	创建容器使用的镜像名称		容器
+容器id	基础属性	container_id	字符	容器的唯一标识id		容器
+容器镜像标签	基础属性	container_image_tag	字符	容器的别名标签		容器
+容器运行时间	基础属性	container_runtime	字符	容器运行的时间		容器
+容器名称	基础属性	container_name	字符	容器名称		容器
+对象GUID	基础属性	object_guid	字符	对象GUID		对象
+对象新名称	基础属性	object_newname	字符	对象新名称		对象
+对象名称	基础属性	object_name	字符	对象名称		对象
+对象属性	基础属性	object_properties	字符	对象属性		对象
+对象类型	基础属性	object_type	字符	对象类型		对象
+句柄ID	基础属性	handleid	字符			对象
+对象ID	基础属性	object_id	字符	对象ID		对象
+对象服务	基础属性	object_server	字符	对象服务		对象
+引擎版本	基础属性	engine_version	字符			应用
+应用签名信息	基础属性	app_sign	字符	应用签名信息		应用
+软件版本	基础属性	software_version	字符			应用
+应用包名	基础属性	app_packagename	字符	一般指手机端应用		应用
+应用ID	基础属性	app_id	字符	应用ID		应用
+应用版本	基础属性	app_version	字符	应用版本		应用
+应用类型	基础属性	app_type	字符	应用类型		应用
+应用名	基础属性	app_name	字符	360-mobile		应用
+数据库命令	基础属性	db_cmd	字符	数据库命令、SQL语句等		数据库
+数据库表列数	基础属性	db_column_num	整型	数据库表列数		数据库
+数据库响应	基础属性	db_response	字符	数据库响应		数据库
+数据库表列名称	基础属性	db_column_name	字符	数据库表列名称		数据库
+数据库表行名称	基础属性	db_rows_name	字符	数据库表行名称		数据库
+数据库版本	基础属性	db_version	字符	数据库版本		数据库
+数据库表列值	基础属性	db_column_value	字符	数据库表列值		数据库
+数据库表行数	基础属性	db_rows_num	整型	数据库表行数		数据库
+数据库名	基础属性	db_name	字符	数据库名		数据库
+数据库命令类型	基础属性	db_cmd_type	字符			数据库
+数据库表行值	基础属性	db_rows_value	字符	数据库表行值		数据库
+数据库表名	基础属性	db_table_name	字符	数据库表名		数据库
+文件云查等级	基础属性	file_net_level	整型	云查的等级		文件
+旧文件路径	基础属性	old_file_path	字符			文件
+文件inode节点	基础属性	file_inode	字符	储存文件元信息的区域就叫做inode		文件
+旧HOME目录路径	基础属性	old_home_directory	字符	老的home目录		文件
+文件所有者	基础属性	file_owner	字符	文件的所有者		文件
+文件读写属性	基础属性	file_readonly	字符	文件的可读、可写属性		文件
+HOME目录路径	基础属性	home_directory	字符	系统/home下的目录		文件
+文件权限	基础属性	file_permission	字符	文件的权限属性		文件
+快捷方式名称	基础属性	lnk_name	字符	文件的快捷方式		文件
+源文件名称	基础属性	src_filename	字符	来源的文件名称		文件
+文件大小	基础属性	file_size	字符	整个文件的大小		文件
+新文件路径	基础属性	new_file_path	字符			文件
+文件来源	基础属性	file_source	字符			文件
+文件签名状态	基础属性	file_signature_status	字符	文件的签名状态		文件
+文件后缀名	基础属性	file_extension	字符	文件的后缀		文件
+目的文件路径	基础属性	dst_file_path	字符	目的文件夹路径		文件
+文件内容	基础属性	file_content	字符	文件的时间，错误码等		文件
+快捷方式路径	基础属性	lnk_path	字符			文件
+文件签名	基础属性	file_signer	字符	文件的数字签名		文件
+文件hash列表	基础属性	file_hash_list	字符	文件hash值组成的列表		文件
+文件SHA256	基础属性	file_sha256	字符	文件SHA256值		文件
+新HOME目录路径	基础属性	new_home_directory	字符	新的home目录		文件
+快捷方式命令行	基础属性	lnk_cmd	字符			文件
+新文件名称	基础属性	new_filename	字符			文件
+旧文件名称	基础属性	old_filename	字符			文件
+源文件路径	基础属性	src_file_path	字符	来源的文件路径		文件
+文件类型	基础属性	file_type	字符	文件类型与文件后缀名不同；		文件
+文件HASH值	基础属性	file_hash	字符	文件的hash值		文件
+文件pdb	基础属性	file_pdb	字符	文件的PDB信息，记录的是文件的调试文件路径		文件
+文件版本	基础属性	file_ver	字符	文件的版本		文件
+目的文件名称	基础属性	dst_filename	字符	目的的文件名称		文件
+文件SHA1	基础属性	file_sha1	字符	文件的sha1值		文件
+文件目录	基础属性	file_directory	字符	文件所在文件夹		文件
+文件名称列表	基础属性	filename_list	字符	文件名组成的列表		文件
+文件名称	基础属性	filename	字符	传输的文件名称		文件,沙箱,smb协议,ftp协议,nfs协议
+文件MD5	基础属性	file_md5	字符	文件的md5值，16位或者32位		文件,沙箱,防病毒
+文件路径	基础属性	file_path	字符	文件的系统路径		文件,防病毒
+日志类型	基础属性	log_type	字符	安全设备产生对日志的分类，一般用于区分哪个模块产生的日志		日志
+目的服务名称	基础属性	dst_service_name	字符	目的服务名称		服务
+服务句柄	基础属性	service_handle	字符	服务句柄		服务
+服务展示名称	基础属性	service_display_name	字符	服务展示的名称		服务
+服务启动类型	基础属性	service_start_type	字符	服务启动类型		服务
+服务名称	基础属性	services_name	字符	服务名称		服务
+服务操作	基础属性	service_control	字符	服务操作信息		服务
+服务类型	基础属性	service_type	字符	服务类型		服务
+服务命令行	基础属性	service_cmd	字符	服务器启动执行的命令		服务
+服务操作权限	基础属性	service_access_mask	字符	服务的操作权限		服务
+服务可执行文件路径	基础属性	service_binary_path	字符	服务可执行文件路径		服务
+源服务名称	基础属性	src_service_name	字符	源服务名称		服务
+源服务启动类型	基础属性	src_service_start_type	字符	源服务启动类型		服务
+服务端主机名称	基础属性	server_host	字符	服务端的主机名称		服务端
+服务端GUID	基础属性	server_guid	字符			服务端
+服务器主机秘钥算法列表	基础属性	server_host_key_algorithms	字符	服务器密钥算法列表		服务端
+服务端秘钥协商信息	基础属性	serverkey_exchange_info	字符	利用“密钥协商机制”与服务器端（server）协商出一个只有二者可知的用来对于应用层数据进行加密的密钥		服务端
+服务端域名	基础属性	server_domain	字符	服务端的域名		服务端
+服务端秘钥交换算法列表	基础属性	server_kex_algorithms	字符	服务端身份认证算法列表		服务端
+服务端IP	基础属性	server_ip	IP	服务端的IP地址		服务端
+服务端cookie	基础属性	server_cookie	字符	服务端的cookie内容		服务端
+服务端软件版本	基础属性	server_software_version	字符	服务端安装软件的版本		服务端
+服务端协议版本	基础属性	server_proto_version	字符	服务端的协议版本		服务端
+服务器名称	基础属性	server_name	字符	服务器的名称		服务端
+服务端ID	基础属性	server_id	字符	服务端唯一标识符		服务端
+模块大小	基础属性	module_size	字符	模块大小		模块
+模块路径	基础属性	module_path	字符	模块路径		模块
+模块名称	基础属性	module_name	字符	模块名称		模块
+文件ID	基础属性	file_search	字符	用于映射沙箱中文件ID值，可用作本脑下载文件		沙箱
+沙箱版本	基础属性	sandbox_version	字符	沙箱的版本		沙箱
+沙箱名称	基础属性	sandbox_name	字符	沙箱的名称		沙箱
+源nat转换地址	基础属性	src_nat_ip	IP			流量
+响应流量包数	基础属性	flow_res_package	整型			流量
+入接口	基础属性	input	字符	基础属性		流量
+协议版本	基础属性	protocol_version	字符			流量
+请求流量包数	基础属性	flow_req_package	整型			流量
+源地址列表	基础属性	src_ip_list	IP			流量
+源nat转换端口	基础属性	src_nat_port	整型	基础属性		流量
+出接口	基础属性	output	字符	基础属性		流量
+响应流量	基础属性	flow_res	字符			流量
+流量方向	基础属性	flow_direction	字符			流量
+目的nat转换地址	基础属性	dst_nat_ip	IP			流量
+目的端口列表	基础属性	dst_port_list	整型			流量
+请求流量字节数	基础属性	flow_req_size	长整型			流量
+流量数据	基础属性	flow_data	字符			流量
+源MAC	基础属性	src_mac	字符	基础属性		流量
+流量ID	基础属性	flow_id	长整型	流量的唯一标识		流量
+请求流量	基础属性	flow_req	字符			流量
+目的地址列表	基础属性	dst_ip_list	IP			流量
+目的nat转换端口	基础属性	dst_nat_port	整型	基础属性		流量
+响应流量字节数	基础属性	flow_res_size	长整型			流量
+连接数量	基础属性	connect_count	整型			流量
+目的MAC	基础属性	dst_mac	字符	基础属性		流量
+源端口列表	基础属性	src_port_list	整型			流量
+域名	业务属性	domain_name	字符			流量,主机,域,smb协议,dns协议,http协议,域名资产
+协议	业务属性	protocol	字符			流量,服务端,登录,邮件,数据库,情报类型
+源地址	业务属性	src_address	IP			流量,登录
+目的端口	基础属性	dst_port	整型	流量去往的端口		流量,登录
+目的地址	业务属性	dst_address	IP			流量,登录
+源端口	基础属性	src_port	整型	流量来源的端口		流量,登录
+漏洞ID列表	基础属性	vul_id_list	字符	漏洞ID列表		漏洞
+漏洞威胁分	基础属性	vul_scores	字符	漏洞威胁分		漏洞
+漏洞名称	基础属性	vul_names	字符	漏洞名称		漏洞
+漏洞级别	基础属性	vul_level	字符			漏洞
+漏洞数量	基础属性	vul_count	整型	漏洞数量		漏洞
+有效用户ID	基础属性	effective_user_id	字符	有效用户ID		用户
+用户类型	基础属性	user_type	字符	用户类型		用户
+文件系统用户ID	基础属性	file_system_user_id	字符	文件系统用户ID，linux用于文件系统的访问控制，在没有明确设置的情况下与EUID相同		用户
+用户ID	基础属性	user_id	字符	用户ID		用户
+源用户名称	基础属性	src_username	字符	源用户名称		用户
+目的shell路径	基础属性	dst_shell_path	字符	目的shell路径		用户
+实际用户ID	基础属性	real_user_id	字符	实际用户ID(RUID)，用户登录linux系统后分配的用户ID		用户
+目的用户SID	基础属性	dst_user_sid	字符	目的用户SID		用户
+手机号	基础属性	user_phone	字符	手机号		用户
+用户数据	基础属性	user_data	字符	用户数据		用户
+用户邮箱	基础属性	user_mail	字符	用户邮箱		用户
+源用户SID	基础属性	src_user_sid	字符	源用户SID		用户
+用户管理员标志	基础属性	user_is_admin	字符	标记用户是否为管理员		用户
+目的用户名称	基础属性	dst_username	字符	目的用户名称		用户
+旧用户ID	基础属性	old_user_id	字符	原用户ID		用户
+用户RID	基础属性	user_rid	字符	用户RID		用户
+用户SID	基础属性	user_sid	字符	用户SID，windows安全标识符，是标识用户、组和计算机帐户的唯一的号码		用户
+旧实际用户ID	基础属性	old_real_user_id	字符	原实际用户ID		用户
+身份证	基础属性	id_num	字符	身份证号		用户
+用户部门	基础属性	user_department	字符	用户部门		用户
+旧shell路径	基础属性	old_shell_path	字符	旧shell路径		用户
+用户工号	基础属性	user_work_num	字符	用户工号		用户
+用户权限	基础属性	user_priv	字符	用户权限		用户
+旧文件系统用户ID	基础属性	old_file_system_user_id	字符	原文件系统用户ID		用户
+shell路径	基础属性	shell_path	字符	shell路径		用户
+操作账号	基础属性	operation_user	字符	操作账号		用户
+身份证地址	基础属性	id_num_address	字符	身份证地址		用户
+旧有效用户ID	基础属性	old_effective_user_id	字符	原有效用户ID		用户
+用户sid可信度	基础属性	user_sid_readable	字符	标记用户SID是否可信		用户
+用户公司	基础属性	user_company	字符	用户公司		用户
+用户密码	基础属性	userpass	字符	用户密码		用户,数据库,ldap协议,telnet协议,ssh协议
+组句柄	基础属性	group_handle	字符	组句柄		用户组
+用户组名称	基础属性	user_group_name	字符	用户组名称		用户组
+文件系统用户组ID	基础属性	file_system_user_group_id	字符	文件系统用户组ID		用户组
+有效用户组ID	基础属性	effective_user_group_id	字符	有效用户组ID		用户组
+目的用户组ID	基础属性	dst_user_group_id	字符	目的用户组ID		用户组
+旧用户组ID	基础属性	old_user_group_id	字符	旧用户组ID		用户组
+组域名	基础属性	group_domain	字符	组域名		用户组
+旧实际用户组ID	基础属性	old_real_user_group_id	字符	旧实际用户组ID		用户组
+用户组ID	基础属性	user_group_id	字符	用户组id		用户组
+旧有效用户组ID	基础属性	old_effective_user_group_id	字符	旧有效用户组ID		用户组
+用户组属性	基础属性	user_group_attr	字符	用户组属性		用户组
+设置用户组ID	基础属性	set_user_group_id	字符	设置用户组ID		用户组
+用户组ID标识	基础属性	SPID	字符	用户组ID标识		用户组
+旧设置用户组ID	基础属性	old_set_user_group_id	字符	旧设置用户组ID		用户组
+实际用户组ID	基础属性	real_user_group_id	字符	实际用户组ID		用户组
+旧文件系统用户组ID	基础属性	old_file_system_user_group_id	字符	旧文件系统用户组ID		用户组
+目的用户组名称	基础属性	dst_user_group_name	字符			用户组
+登录过程	基础属性	logon_process_name	字符	非windows登录类型的其他登录方式		登录
+登录ID	基础属性	login_id	字符	登录ID		登录
+登录系统	基础属性	login_app	枚举	在用户登录、登出、暴力破解等事件中，指明是什么类型的账号；	ftp,linux,rdp,smb,ssh,telnet,VPN,windows,其他,准入系统,安全设备,数据库,未知,邮箱	登录
+登录类型	基础属性	login_type	字符	登录类型		登录
+管道名称	基础属性	pipe_name	字符	命名管道名称		管道
+源线程ID	基础属性	src_tid	整型	源线程的唯一标识id		线程
+目的线程完整性等级	基础属性	dst_thread_integrity	字符	目的线程的完整性等级信息		线程
+目的线程ID	基础属性	dst_tid	字符	目的线程的唯一标识id		线程
+线程MD5	基础属性	thread_md5	字符	线程的MD5值		线程
+源线程MD5	基础属性	src_thread_md5	字符	源线程的MD5值		线程
+目的线程MD5	基础属性	dst_thread_md5	字符	目的线程的MD5值		线程
+源线程模块	基础属性	src_thread_module	字符	源线程的模块名称		线程
+线程ID	基础属性	tid	字符	线程id		线程
+目的线程模块	基础属性	dst_thread_module	字符	目的线程的模块名称		线程
+源线程完整性等级	基础属性	src_thread_integrity	字符	源线程的完整性等级信息		线程
+源线程起始地址	基础属性	src_thread_start_address	字符	源线程的开始地址		线程
+目的线程起始地址	基础属性	dst_thread_start_address	字符	目的线程的开始地址		线程
+线程起始地址	基础属性	thread_start_address	字符	线程的开始地址		线程
+线程模块	基础属性	thread_module	字符	线程所属的模块名称		线程
+线程完整性等级	基础属性	thread_integrity	字符	线程的完整性等级信息		线程
+机构名称	基础属性	institution_name	字符			组织
+组织ID	基础属性	org_id	字符			组织
+网站名称	基础属性	website_name	字符	网站描述		组织
+组织名称	基础属性	org_name	字符			组织
+脚本内容	基础属性	script_blocktext	字符	脚本的代码内容		脚本
+脚本执行函数类型	基础属性	script_action_type	字符	脚本的执行函数类型		脚本
+脚本上下文	基础属性	script_function_context	字符	脚本上下文信息		脚本
+脚本类型	基础属性	script_type	字符	脚本的类型		脚本
+脚本执行函数参数	基础属性	script_action_funcargv	字符	脚本执行的函数参数内容		脚本
+脚本执行函数名称	基础属性	script_action_funcname	字符	脚本执行的函数名		脚本
+脚本名称	基础属性	script_filename	字符	脚本的文件名称		脚本
+蜜罐名称	基础属性	honeypot_name	字符	蜜罐的名称		蜜罐
+蜜罐探针ID	基础属性	honeypot_agent_id	字符	蜜罐探针的ID		蜜罐
+蜜标状态	基础属性	honeytoken_status	字符	蜜罐诱饵的状态		蜜罐
+蜜标通道	基础属性	honeytoken__channel	字符	蜜罐诱饵		蜜罐
+蜜罐探针名称	基础属性	honeypot_agent_name	字符	蜜罐探针的名称		蜜罐
+蜜罐ID	基础属性	honeypot_id	字符	蜜罐的ID		蜜罐
+补丁ID	基础属性	patch_id	字符	补丁ID		补丁
+补丁地址	基础属性	patch_addr	字符	补丁地址		补丁
+补丁名称	基础属性	patch_name	字符	补丁名称		补丁
+计划任务名称	基础属性	task_name	字符	计划任务名称		计划任务
+计划任务登录类型	基础属性	task_logon_type	字符	计划任务登录类型		计划任务
+计划任务命令行	基础属性	task_cmd	字符	计划任务中的命令行		计划任务
+计划任务创建者	基础属性	task_author	字符	创建计划任务的账号		计划任务
+计划任务关联文件	基础属性	task_path	字符	计划任务关联文件		计划任务
+计划任务参数	基础属性	task_exec_argument	字符	计划任务的参数名称		计划任务
+计划任务XML配置文件	基础属性	task_xml	字符	计划任务的xml配置文件信息		计划任务
+CPU核数	基础属性	cpu_cores_count	整型	cpu的核数		计算机资源
+内存空闲值	基础属性	mem_free	字符	内存未使用值		计算机资源
+IO使用率	基础属性	io_usage	浮点数	磁盘IO使用率		计算机资源
+CPU状态	基础属性	cpu_stauts	字符	cou的状态		计算机资源
+内存使用率	基础属性	mem_usage	浮点数	内存使用率		计算机资源
+CPU名称	基础属性	cpu_name	字符	cpu的名称		计算机资源
+CPU使用率	基础属性	cpu_usage	浮点数			计算机资源
+CPU架构	基础属性	cpu_architecture	字符	cpu的架构		计算机资源
+认证消息	基础属性	audit_digest	字符	认证消息		认证
+认证标志	基础属性	auth_flag	字符	认证标志		认证
+认证服务	基础属性	auth_service	字符	认证服务		认证
+认证类型	基础属性	auth_type	字符	认证类型		认证
+设备MAC地址	基础属性	dev_mac	字符			设备
+设备描述	基础属性	dev_describe	字符	设备的描述信息		设备
+设备名称	基础属性	dev_name	字符	设备的名称		设备
+证书显示名称	基础属性	cert_display_name	字符	证书显示名称		证书
+证书名称_RDN	基础属性	cert_name_rdn	字符	证书名称_RDN		证书
+证书类型	基础属性	cert_type	字符	证书类型		证书
+目标进程命令行	基础属性	target_command_line	字符	目标进程命令行		进程
+父进程文件原始名称	基础属性	p_proc_orig_name	字符			进程
+进程特权	基础属性	proc_privileges	字符	进程特权		进程
+父进程完整性等级	基础属性	p_proc_integrity	字符			进程
+目的进程MD5	基础属性	dst_proc_md5	字符	目的进程MD5		进程
+目标进程路径	基础属性	target_process_path	字符	目标进程路径		进程
+进程树上下文ID	基础属性	proc_tree_context_id	字符	进程树上下文ID		进程
+根进程导入表HASH	基础属性	r_proc_importhash	字符	根进程导入表HASH		进程
+父进程PDB	基础属性	p_proc_pdb	字符	父进程PDB		进程
+源进程sha256	基础属性	src_proc_sha256	字符	源进程sha256		进程
+父进程sha1	基础属性	p_proc_sha1	字符	父进程sha1		进程
+源进程路径	基础属性	src_proc_path	字符	源进程路径		进程
+父进程命令行	基础属性	p_proc_command	字符	父进程命令行		进程
+源进程签名	基础属性	src_proc_signer	字符	源进程签名		进程
+进程命令行	基础属性	proc_command	字符	进程命令行		进程
+进程导入表HASH	基础属性	proc_importhash	字符	特指Windows下进程对应PE文件的导入表哈希		进程
+父进程产品名称	基础属性	p_proc_product_name	字符			进程
+进程文件版本号	基础属性	proc_fileversion	字符	进程文件版本号		进程
+进程PDB	基础属性	proc_pdb	字符	进程调试文件文件信息		进程
+监听端口	基础属性	listen_port	整型	监听端口		进程
+进程路径	基础属性	proc_path	字符	进程路径，可以是相对路径或绝对路径		进程
+接口GUID	基础属性	guid	字符	接口guid		进程
+进程令牌类型	基础属性	proc_token_type	字符	进程令牌类型		进程
+进程SHA256	基础属性	proc_sha256	字符	进程可执行文件的SHA256值		进程
+父进程路径	基础属性	p_proc_path	字符	父进程路径		进程
+祖父进程MD5	基础属性	g_proc_md5	字符	祖父进程MD5		进程
+父进程build名称	基础属性	p_proc_build_name	字符			进程
+目的进程pid	基础属性	dst_pid	字符	目的进程pid		进程
+命令行参数数量	基础属性	cmd_argc	整型	命令行参数数量		进程
+目的进程sha256	基础属性	dst_proc_sha256	字符	目的进程sha256		进程
+祖父进程名称	基础属性	g_proc_name	字符			进程
+父进程pid	基础属性	p_pid	字符	父进程pid		进程
+目标进程名称	基础属性	target_process_name	字符	目标进程名称		进程
+进程缓解策略名称	基础属性	proc_policy_name	字符	进程缓解策略名称		进程
+根进程sha1	基础属性	r_proc_sha1	字符	根进程sha1		进程
+进程build名称	基础属性	proc_build_name	字符	进程文件的内部名称		进程
+hook钩子地址	基础属性	hook_address	字符	hook钩子地址		进程
+祖父进程签名	基础属性	g_proc_signer	字符	祖父进程签名		进程
+父进程MD5	基础属性	p_proc_md5	字符	父进程md5		进程
+进程SHA1	基础属性	proc_sha1	字符	进程可执行文件的SHA1值		进程
+异常代码	基础属性	exception_code	字符	异常代码		进程
+APC执行地址	基础属性	apc_routine	字符	APC执行地址		进程
+hook钩子模块	基础属性	hook_module	字符	hook钩子模块		进程
+源进程sha1	基础属性	src_proc_sha1	字符	源进程sha1		进程
+进程树	基础属性	proc_tree	字符	进程树		进程
+进程名称	基础属性	proc_name	字符	进程名称		进程
+根进程路径	基础属性	r_proc_path	字符	根进程路径		进程
+hook钩子函数名称	基础属性	hook_func_name	字符	hook钩子函数名称		进程
+根进程PDB	基础属性	r_proc_pdb	字符	根进程PDB		进程
+进程令牌用户名	基础属性	proc_token_user_name	字符	进程令牌用户名		进程
+根进程签名	基础属性	r_proc_signer	字符	根进程签名		进程
+祖父进程文件原始名称	基础属性	g_proc_orig_name	字符			进程
+ppath原始路径	基础属性	original_ppath	字符	ppath原始路径		进程
+进程属性变更类型	基础属性	proc_change_type	字符	进程属性变更类型		进程
+目的进程名称	基础属性	dst_proc_name	字符	目的进程名称		进程
+进程关联终端	基础属性	proc_tty	字符	进程关联终端		进程
+进程文件原始名称	基础属性	proc_orig_name	字符			进程
+进程产品名称	基础属性	proc_product_name	字符	进程文件产品名		进程
+祖父进程路径	基础属性	g_proc_path	字符	祖父进程文件路径		进程
+进程MD5	基础属性	proc_md5	字符	进程可执行文件的MD5值		进程
+源进程MD5	基础属性	src_proc_md5	字符	源进程MD5		进程
+旧进程名称	基础属性	old_proc_name	字符	旧进程名称		进程
+祖父进程命令行	基础属性	g_proc_command	字符	祖父进程命令行		进程
+源进程命令行	基础属性	src_proc_command	字符	源进程命令行		进程
+目的进程sha1	基础属性	dst_proc_sha1	字符	目的进程sha1		进程
+父进程文件版本号	基础属性	p_proc_fileversion	字符			进程
+祖父进程PDB	基础属性	g_proc_pdb	字符	祖父进程PDB		进程
+祖父进程导入表HASH	基础属性	g_proc_importhash	字符	祖父进程导入表HASH		进程
+进程完整性等级	基础属性	proc_integrity	字符	进程完整性等级		进程
+进程当前目录	基础属性	proc_current_directory	字符	进程当前目录		进程
+API名称	基础属性	proc_api_name	字符	API名称		进程
+目的进程签名	基础属性	dst_proc_signer	字符	目的进程签名		进程
+根进程命令行	基础属性	r_proc_command	字符	根进程命令行		进程
+目的进程命令行	基础属性	dst_proc_command	字符	目的进程命令行		进程
+祖父进程pid	基础属性	g_pid	字符	祖父进程pid		进程
+父进程导入表HASH	基础属性	p_proc_importhash	字符	父进程导入表HASH		进程
+进程认证HASH	基础属性	proc_cert_hash	字符	进程文件数字签名哈希		进程
+目标进程PID	基础属性	target_process_id	字符	目标进程pid		进程
+根进程pid	基础属性	r_pid	字符	根进程pid		进程
+命令行参数	基础属性	cmd_args	字符			进程
+ppath假参数	基础属性	fake_parameters_ppath	字符	ppath假参数		进程
+目的进程路径	基础属性	dst_proc_path	字符	目的进程路径		进程
+调用权限值	基础属性	desired_access	字符	调用权限值		进程
+进程pid	基础属性	pid	字符	进程ID		进程
+祖父进程sha256	基础属性	g_proc_sha256	字符	祖父进程sha256		进程
+源进程pid	基础属性	src_pid	字符	源进程pid		进程
+父进程名称	基础属性	p_proc_name	字符	父进程名称		进程
+祖父进程sha1	基础属性	g_proc_sha1	字符	祖父进程sha1		进程
+父进程签名	基础属性	p_proc_signer	字符	父进程签名		进程
+伪装目标父进程路径	基础属性	spoofing_parent_path	字符	伪装目标父进程路径		进程
+父进程sha256	基础属性	p_proc_sha256	字符	父进程sha256		进程
+根进程MD5	基础属性	r_proc_md5	字符	根进程MD5		进程
+进程SID	基础属性	proc_sid	字符	进程sid		进程
+根进程sha256	基础属性	r_proc_sha256	字符	根进程sha256		进程
+进程签名	基础属性	proc_signer	字符	进程签名信息		进程
+邮件发件服务器地址	基础属性	mailserver	IP	邮件发件服务器地址		邮件
+邮件收件人IP	基础属性	mail_receiver_ip	IP			邮件
+邮件抄送人数量	基础属性	mail_cc_count	整型	邮件抄送人数量		邮件
+异常标签	基础属性	abnormal_label	字符	邮件异常标签		邮件
+图片OCR信息	基础属性	ocrs	字符	邮件图片OCR信息		邮件
+HASH检测结果	基础属性	ti	字符	邮件HASH检测结果		邮件
+邮件ID	基础属性	mail_id	字符	邮件ID		邮件
+邮件附件检测结果	基础属性	attachments_result	字符	邮件附件检测结果		邮件
+邮件总数	基础属性	mail_count	整型	邮件总数		邮件
+邮件主题	基础属性	mail_subject	字符	邮件主题		邮件
+邮件威胁等级	基础属性	level	字符	邮件威胁等级		邮件
+命中威胁情报	基础属性	intelligence	字符	邮件命中威胁情报		邮件
+邮件附件数量	基础属性	mail_attchment_count	整型	邮件附件数量		邮件
+邮件账号密码数字摘要	基础属性	mail_pass_digest	字符	邮件账号密码数字摘要		邮件
+邮件原始发件人IP	基础属性	original_mail_ip	IP	邮件原始发件人IP		邮件
+邮件操作命令	基础属性	mail_cmd	字符	邮件操作命令		邮件
+邮件客户端	基础属性	mail_client	字符	邮件客户端		邮件
+检测信息	基础属性	rval	字符	邮件检测信息		邮件
+邮件附件信息	基础属性	attachment_info	字符	邮件附件信息		邮件
+邮件附件名称列表	基础属性	attachment_names	字符	邮件附件名称列表		邮件
+邮件密送人	基础属性	mail_bcc	字符	邮件密送人		邮件
+邮件大小	基础属性	mail_size	整型	邮件大小		邮件
+邮件抄送人	基础属性	mail_cc	字符	邮件抄送人		邮件
+邮件正文	基础属性	mail_text	字符	邮件正文		邮件
+邮件附件MD5列表	基础属性	attachment_md5s	字符	邮件附件MD5列表		邮件
+邮件附件Magic	基础属性	mail_attchment_magic	字符	附件magic		邮件
+二维码信息	基础属性	qrcode	字符	邮件二维码信息		邮件
+邮件附件magic列表	基础属性	mail_attchment_magic_list	字符	邮件附件magic列表		邮件
+收件人数量	基础属性	mail_receiver_count	整型	收件人数量		邮件
+邮件密送人数量	基础属性	mail_bcc_count	整型	邮件密送人数量		邮件
+发件人	基础属性	mail_sender	字符	发件人		邮件
+收件人	基础属性	mail_receiver	字符	收件人		邮件
+邮件正文URL列表	基础属性	mail_texturls	字符	邮件正文URL列表		邮件
+配置类型	基础属性	profile_type	字符	描述哪个实体的配置		配置
+配置名称	基础属性	profile_name	字符	配置名称		配置
+防火墙规则ID	基础属性	firewall_rule_id	字符	防火墙的规则ID		防火墙
+防火墙规则	基础属性	firewall_rule	字符	防火墙所拥有的的规则		防火墙
+病毒名称	基础属性	malware_name	字符	病毒名称		防病毒
+病毒家族	基础属性	malware_family	字符	病毒家族名称		防病毒

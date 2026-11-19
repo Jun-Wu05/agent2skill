@@ -1,4 +1,4 @@
-"""log_input 单元测试：Excel 数据族读取契约（照工作台行为复刻）。
+"""log_input 单元测试：Excel 数据族读取契约。
 
 接缝：_shared.log_input.load_log_table(path) -> dict，以及
 LogInputError(code, message) 稳定错误码。夹具用 openpyxl 在临时目录

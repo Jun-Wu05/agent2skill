@@ -18,6 +18,9 @@ DOWNLOAD_NAME_TEMPLATES: dict[str, str] = {
     "current_config": "current_config_{timestamp}.txt",
     "field_adjusted_config": "fieldadjusted_config_{timestamp}.txt",
     "unmappedconfig_subrules": "unmappedconfig_subrules_{timestamp}.txt",
+    "mappedconfig_subrules": "mappedconfig_subrules_{timestamp}.txt",
+    "mappedconfig_mainrules": "mappedconfig_mainrules_{timestamp}.txt",
+    "fieldmapped_config": "fieldmapped_config_{timestamp}.txt",
 }
 
 _TIMESTAMP_FORMAT = "%Y%m%d_%H%M"

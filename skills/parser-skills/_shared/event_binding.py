@@ -116,3 +116,88 @@ def event_level_normalize_metadata(event_level: str) -> dict[str, Any]:
         ],
         "value": code,
     }
+
+
+def make_event_name_normalize_entry(event_name: str, sample_count: int = 1) -> dict[str, Any]:
+    """构建【事件名称】normalize 条目（result 按样本数复制）。"""
+    metadata = event_name_normalize_metadata(event_name)
+    return {
+        "mappings": metadata["mappings"],
+        "field": metadata["field"],
+        "sim": metadata["sim"],
+        "result": [event_name] * sample_count,
+        "info": None,
+        "entity": metadata["entity"],
+        "required": False,
+        "core": metadata["core"],
+        "value": metadata["value"],
+        "index": EVENT_NAME_FIELD,
+    }
+
+
+def make_event_level_normalize_entry(event_level: str, sample_count: int = 1) -> dict[str, Any]:
+    """构建【事件级别】normalize 条目（value 写码值，result 保持显示值）。"""
+    metadata = event_level_normalize_metadata(event_level)
+    return {
+        "mappings": metadata["mappings"],
+        "field": metadata["field"],
+        "sim": metadata["sim"],
+        "result": [event_level] * sample_count,
+        "info": None,
+        "entity": metadata["entity"],
+        "required": False,
+        "core": metadata["core"],
+        "value": metadata["value"],
+        "index": EVENT_LEVEL_FIELD,
+    }
+
+
+def _rule_sample_count(rule: dict[str, Any]) -> int:
+    """按子规则既有 normalize 条目的 result 长度推导样本数（无条目回退 1）。"""
+    for entry in rule.get("normalize") or []:
+        result = entry.get("result") if isinstance(entry, dict) else None
+        if isinstance(result, list) and result:
+            return len(result)
+    return 1
+
+
+def apply_event_fields_to_sub_rules(
+    sub_rules: list, judgments: dict[str, str]
+) -> list:
+    """把事件名称判定结果写入每条子规则（深拷贝，不修改原数据）。
+
+    对每条有合法判定（21 名单内）的子规则：
+    - parser.filter 末尾追加 addFields：``{事件名称: 分类名, 事件级别: 绑定级别}``；
+    - normalize 末尾追加事件名称、事件级别两条目，result 按该子规则样本数复制。
+    无判定或判定非法的子规则保持不变（宁缺勿错，不写入）。
+    """
+    import copy
+
+    updated = copy.deepcopy(sub_rules)
+    for rule in updated:
+        event_name = judgments.get(str(rule.get("name", "")))
+        if event_name not in ALL_EVENT_NAMES:
+            continue
+        event_level = EVENT_NAME_LEVEL_BINDING[event_name]
+        sample_count = _rule_sample_count(rule)
+
+        parser = rule.get("parser") or {}
+        filters = parser.get("filter") or []
+        filters.append(
+            {
+                "fields": {
+                    EVENT_NAME_FIELD: event_name,
+                    EVENT_LEVEL_FIELD: event_level,
+                },
+                "name": "addFields",
+                "id": "",
+            }
+        )
+        parser["filter"] = filters
+        rule["parser"] = parser
+
+        normalize = rule.get("normalize") or []
+        normalize.append(make_event_name_normalize_entry(event_name, sample_count))
+        normalize.append(make_event_level_normalize_entry(event_level, sample_count))
+        rule["normalize"] = normalize
+    return updated

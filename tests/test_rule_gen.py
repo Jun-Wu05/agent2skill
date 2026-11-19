@@ -1,7 +1,8 @@
-"""rule_gen 单元测试：规则骨架模板与子规则装配（照工作台 rule_generator 复刻）。
+"""rule_gen 单元测试：规则骨架模板与子规则/入口规则装配。
 
-接缝：get_sub_rule_template / value_to_str / escape_delimit /
-generate_sub_rules（输入为工作台兼容的 classification dict）。
+接缝：get_sub_rule_template / get_entry_rule_template / value_to_str /
+escape_delimit / generate_sub_rules / generate_entry_rule（输入为平台
+兼容的 classification dict）。
 """
 
 from __future__ import annotations
@@ -210,6 +211,206 @@ class GenerateSubRulesJsonTest(unittest.TestCase):
         self.assertEqual(original_log["field"], "original_log")
         self.assertEqual(original_log["entity"], "日志")
         self.assertEqual(original_log["sim"], True)
+
+
+def _entry_classification(log_format="JSON", log_format_detail="纯JSON",
+                          feature_field="action", feature_identifier=r"(\{[\S\s]*\})",
+                          analysis=None, details=None):
+    return {
+        "status": "SUCCESS",
+        "log_format": log_format,
+        "log_format_detail": log_format_detail,
+        "feature_field": feature_field,
+        "feature_identifier": feature_identifier,
+        "Diversion_method": "日志类型",
+        "analysis": analysis
+        or {
+            "has_json_structure": log_format == "JSON",
+            "has_cef_prefix": False,
+            "has_key_value_pairs": log_format == "KV",
+            "has_delimited_structure": False,
+            "delimit": "||" if log_format == "KV" else "",
+            "tab": ":" if log_format == "KV" else "",
+        },
+        "classification_details": details
+        or [
+            {
+                "logtype": "登录",
+                "meaning": "登录",
+                "sample": '{"action":"登录","user":"a"}',
+                "real_samples": '{"action":"登录","user":"a"}',
+            },
+            {
+                "logtype": "登出",
+                "meaning": "登出",
+                "sample": '{"action":"登出"}',
+                "real_samples": '{"action":"登出"}',
+            },
+        ],
+    }
+
+
+def _source_fields():
+    return rule_gen.RuleSourceFields(product="天擎", log_vendor="奇安信")
+
+
+class EntryRuleTemplateTest(unittest.TestCase):
+    def test_template_shape(self):
+        template = rule_gen.get_entry_rule_template()
+        self.assertEqual(template["parser"]["subResolver"], 0)
+        self.assertIsNone(template["parser"]["filter"])
+        self.assertEqual(template["normalize"][0]["index"], "original_log")
+        self.assertEqual(template["normalize"][0]["field"], "original_log")
+        self.assertEqual(template["subResolver"], 0)
+
+    def test_template_deep_copy(self):
+        first = rule_gen.get_entry_rule_template()
+        first["normalize"][0]["result"].append("x")
+        second = rule_gen.get_entry_rule_template()
+        self.assertEqual(second["normalize"][0]["result"], [])
+
+
+class RuleSourceFieldsTest(unittest.TestCase):
+    def test_strips_and_fills_default_data_source(self):
+        fields = rule_gen.RuleSourceFields(product=" 天擎 ", log_vendor=" 奇安信 ")
+        self.assertEqual(fields.product, "天擎")
+        self.assertEqual(fields.log_vendor, "奇安信")
+        self.assertEqual(fields.data_source, "天擎(奇安信)")
+
+    def test_missing_required_raises(self):
+        with self.assertRaises(ValueError):
+            rule_gen.RuleSourceFields(product="", log_vendor="奇安信")
+        with self.assertRaises(ValueError):
+            rule_gen.RuleSourceFields(product="天擎", log_vendor="")
+
+    def test_source_builders(self):
+        fields = _source_fields()
+        filter_item = rule_gen.make_source_fields_filter(fields)
+        self.assertEqual(filter_item["name"], "addFields")
+        self.assertEqual(filter_item["id"], "")
+        self.assertEqual(
+            filter_item["fields"],
+            {"data_source": "天擎(奇安信)", "log_vendor": "奇安信", "product": "天擎"},
+        )
+        entries = rule_gen.make_source_normalize_entries(fields)
+        self.assertEqual([e["index"] for e in entries], ["product", "log_vendor", "data_source"])
+        self.assertEqual(entries[0]["result"], ["天擎"])
+        self.assertTrue(entries[0]["core"])
+        self.assertFalse(entries[2]["core"])
+        properties = rule_gen.make_source_properties(fields)
+        self.assertEqual([p["key"] for p in properties], ["product", "log_vendor", "data_source"])
+        self.assertEqual(properties[0]["sample"], ["天擎"])
+
+
+class GenerateEntryRuleTest(unittest.TestCase):
+    def test_pure_json_entry_rule(self):
+        rule = rule_gen.generate_entry_rule(
+            _entry_classification(), rule_source_fields=_source_fields()
+        )
+        self.assertTrue(rule["name"].startswith("奇安信_天擎_通用_入口规则"))
+        self.assertEqual(len(rule["name"]) - len("奇安信_天擎_通用_入口规则"), 4)
+        self.assertEqual(rule["sample"], '{"action":"登录","user":"a"}#next#{"action":"登出"}')
+        self.assertEqual(rule["parser"]["name"], "json")
+        self.assertNotIn("value", rule["parser"])
+        self.assertEqual(rule["parser"]["subResolver"], 0)
+        filters = rule["parser"]["filter"]
+        self.assertEqual([f["name"] for f in filters], ["addFields", "conditionMatch", "addFields", "addFields"])
+        self.assertEqual(
+            [case["value"] for case in filters[1]["cases"]],
+            ["original_log like '登录'", "original_log like '登出'"],
+        )
+        self.assertEqual(filters[2]["fields"], {"日志类型": "%{action}"})
+        self.assertEqual(
+            filters[3]["fields"]["product"], "天擎"
+        )
+        self.assertEqual(
+            [p["key"] for p in rule["properties"]],
+            ["log_type", "rule_name_list", "product", "log_vendor", "data_source"],
+        )
+        self.assertEqual(rule["properties"][0]["sample"], ["登录", "登出"])
+        self.assertEqual(rule["properties"][1]["sample"], [f"[{rule['name']}]", f"[{rule['name']}]"])
+        normalize = rule["normalize"]
+        self.assertEqual(normalize[0]["result"], ['{"action":"登录","user":"a"}', '{"action":"登出"}'])
+        self.assertEqual(normalize[1]["index"], "日志类型")
+        self.assertEqual(normalize[1]["result"], [])
+        self.assertEqual([e["index"] for e in normalize[2:]], ["product", "log_vendor", "data_source"])
+
+    def test_syslog_json_entry_rule(self):
+        rule = rule_gen.generate_entry_rule(
+            _entry_classification(log_format_detail="日志头+JSON"),
+            rule_source_fields=_source_fields(),
+        )
+        self.assertEqual(rule["parser"]["name"], "orgRegex")
+        self.assertEqual(rule["parser"]["value"], r"(\{[\S\s]*\})")
+        self.assertEqual([f["name"] for f in rule["parser"]["filter"]], ["addFields", "conditionMatch", "addFields"])
+        indexes = [e["index"] for e in rule["normalize"]]
+        self.assertEqual(indexes, ["original_log", "product", "log_vendor", "data_source"])
+
+    def test_pure_kv_entry_rule(self):
+        classification = _entry_classification(
+            log_format="KV",
+            log_format_detail="纯KV",
+            feature_field="type",
+            feature_identifier="",
+            details=[
+                {"logtype": "登录", "meaning": "登录", "sample": "type:登录||user:a"},
+                {"logtype": "登出", "meaning": "登出", "sample": "type:登出"},
+            ],
+        )
+        rule = rule_gen.generate_entry_rule(classification, rule_source_fields=_source_fields())
+        self.assertEqual(rule["parser"]["name"], "delimitWithKeyMap")
+        self.assertEqual(rule["parser"]["tab"], ":")
+        self.assertEqual(rule["parser"]["delimit"], "||")
+        filters = rule["parser"]["filter"]
+        self.assertEqual(
+            [f["name"] for f in filters], ["addFields", "addFields", "conditionMatch", "addFields"]
+        )
+        self.assertEqual(filters[1]["fields"], {"日志类型": "%{type}"})
+        self.assertEqual(
+            [case["value"] for case in filters[2]["cases"]],
+            ["type like '登录'", "type like '登出'"],
+        )
+        indexes = [e["index"] for e in rule["normalize"]]
+        self.assertEqual(indexes, ["original_log", "日志类型", "product", "log_vendor", "data_source"])
+
+    def test_syslog_kv_entry_rule(self):
+        classification = _entry_classification(
+            log_format="KV",
+            log_format_detail="日志头+KV",
+            feature_field="type",
+            feature_identifier=r"HOST-\s+(.*)",
+        )
+        rule = rule_gen.generate_entry_rule(classification, rule_source_fields=_source_fields())
+        self.assertEqual(rule["parser"]["name"], "orgRegex")
+        self.assertEqual(rule["parser"]["value"], r"HOST-\s+(.*)")
+        filters = rule["parser"]["filter"]
+        self.assertEqual([f["name"] for f in filters], ["addFields", "conditionMatch", "addFields"])
+        self.assertEqual(
+            [case["value"] for case in filters[1]["cases"]],
+            ["original_log like '登录'", "original_log like '登出'"],
+        )
+        indexes = [e["index"] for e in rule["normalize"]]
+        self.assertEqual(indexes, ["original_log", "product", "log_vendor", "data_source"])
+
+    def test_default_branch_redirect_filter(self):
+        rule = rule_gen.generate_entry_rule(
+            _entry_classification(log_format="", log_format_detail="", feature_identifier=r"(?<host>.*)"),
+        )
+        self.assertEqual(rule["parser"]["name"], "orgRegex")
+        filters = rule["parser"]["filter"]
+        self.assertEqual([f["name"] for f in filters], ["addFields", "redirect"])
+        self.assertEqual(filters[1]["name"], "redirect")
+        self.assertEqual(len(filters[1]["cases"]), 2)
+        self.assertEqual(filters[1]["cases"][0]["rule"]["name"], "removeFields")
+        self.assertTrue(rule["name"].startswith("入口规则_"))
+
+    def test_without_source_fields(self):
+        rule = rule_gen.generate_entry_rule(_entry_classification())
+        self.assertTrue(rule["name"].startswith("入口规则_"))
+        self.assertEqual([f["name"] for f in rule["parser"]["filter"]], ["addFields", "conditionMatch", "addFields"])
+        self.assertEqual([p["key"] for p in rule["properties"]], ["log_type", "rule_name_list"])
+        indexes = [e["index"] for e in rule["normalize"]]
+        self.assertEqual(indexes, ["original_log", "日志类型"])
 
 
 if __name__ == "__main__":

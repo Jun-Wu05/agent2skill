@@ -1,4 +1,4 @@
-"""log_extract 单元测试：数据族确定性提取与聚合（照工作台复刻）。
+"""log_extract 单元测试：数据族确定性提取与聚合。
 
 接缝：extract_json_value / strip_header / KvValueExtractor /
 aggregate_by_field / kv_key_line_coverage / derive_separator_candidates。
@@ -144,7 +144,7 @@ class AggregateByFieldTest(unittest.TestCase):
         self.assertEqual(len(result["values"]["a"]["samples"]), 3)
 
     def test_identical_lines_deduped_in_samples(self):
-        # 工作台原生行为：相同样本行只保留一份
+        # 参照行为：相同样本行只保留一份
         logs = "\n".join(["type=a"] * 5)
         result = log_extract.aggregate_by_field(
             logs, "type", self._extractor().extract_value

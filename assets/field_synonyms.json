@@ -1,0 +1,1752 @@
+{
+  "src": {
+    "en": "source",
+    "zh": [
+      "源",
+      "源地址"
+    ]
+  },
+  "dst": {
+    "en": "destination",
+    "zh": [
+      "目的",
+      "目的地址",
+      "dest"
+    ]
+  },
+  "source": {
+    "en": "source",
+    "zh": [
+      "源",
+      "src"
+    ]
+  },
+  "dest": {
+    "en": "destination",
+    "zh": [
+      "目的",
+      "dst"
+    ]
+  },
+  "target": {
+    "en": "target",
+    "zh": [
+      "目的",
+      "目标"
+    ]
+  },
+  "parent": {
+    "en": "parent",
+    "zh": [
+      "父"
+    ]
+  },
+  "pid": {
+    "en": "pid",
+    "zh": []
+  },
+  "ip": {
+    "en": "ip_address",
+    "zh": [
+      "地址",
+      "IP地址",
+      "IP",
+      "address"
+    ]
+  },
+  "src_ip": {
+    "en": "source_ip",
+    "zh": [
+      "源IP地址",
+      "源IP",
+      "源地址"
+    ]
+  },
+  "dst_ip": {
+    "en": "destination_ip",
+    "zh": [
+      "目的地址",
+      "目的IP",
+      "目标地址",
+      "目标IP"
+    ]
+  },
+  "mac": {
+    "en": "mac_address",
+    "zh": [
+      "MAC地址",
+      "MAC"
+    ]
+  },
+  "mac_address": {
+    "en": "mac_address",
+    "zh": [
+      "MAC地址",
+      "物理地址",
+      "主机MAC",
+      "主机MAC地址"
+    ]
+  },
+  "address": {
+    "en": "address",
+    "zh": [
+      "地址"
+    ]
+  },
+  "port": {
+    "en": "port",
+    "zh": [
+      "端口"
+    ]
+  },
+  "process_name": {
+    "en": "proc_name",
+    "zh": [
+      "进程名称",
+      "进程名",
+      "进程名称字段"
+    ]
+  },
+  "process_path": {
+    "en": "proc_path",
+    "zh": [
+      "进程文件路径",
+      "进程路径",
+      "进程文件"
+    ]
+  },
+  "os_version": {
+    "en": "os_version",
+    "zh": [
+      "操作系统版本"
+    ]
+  },
+  "parent_pid": {
+    "en": "parent_process_id",
+    "zh": [
+      "父进程号",
+      "父进程ID",
+      "父进程pid"
+    ]
+  },
+  "sql": {
+    "en": "db",
+    "zh": [
+      "数据库",
+      "SQL"
+    ]
+  },
+  "sql_query": {
+    "en": "sql_query",
+    "zh": [
+      "数据库命令",
+      "SQL查询",
+      "数据库查询"
+    ]
+  },
+  "http": {
+    "en": "hypertext_transfer_protocol",
+    "zh": [
+      "HTTP",
+      "http"
+    ]
+  },
+  "url": {
+    "en": "url",
+    "zh": [
+      "链接"
+    ]
+  },
+  "ua": {
+    "en": "User-Agent",
+    "zh": [
+      "用户代理"
+    ]
+  },
+  "user_agent": {
+    "en": "UA",
+    "zh": [
+      "用户代理",
+      "User-Agent"
+    ]
+  },
+  "dns": {
+    "en": "domain_name_system",
+    "zh": [
+      "域名",
+      "DNS"
+    ]
+  },
+  "ssh": {
+    "en": "ssh",
+    "zh": []
+  },
+  "tls": {
+    "en": "SSL",
+    "zh": [
+      "TLS"
+    ]
+  },
+  "user": {
+    "en": "user",
+    "zh": [
+      "用户"
+    ]
+  },
+  "agent": {
+    "en": "agent",
+    "zh": [
+      "代理"
+    ]
+  },
+  "name": {
+    "en": "name",
+    "zh": [
+      "名称"
+    ]
+  },
+  "type": {
+    "en": "type",
+    "zh": [
+      "类型"
+    ]
+  },
+  "level": {
+    "en": "level",
+    "zh": [
+      "等级",
+      "级别"
+    ]
+  },
+  "version": {
+    "en": "version",
+    "zh": [
+      "版本",
+      "ver"
+    ]
+  },
+  "path": {
+    "en": "path",
+    "zh": [
+      "路径"
+    ]
+  },
+  "hash": {
+    "en": "hash",
+    "zh": [
+      "哈希"
+    ]
+  },
+  "md5": {
+    "en": "md5",
+    "zh": []
+  },
+  "sha256": {
+    "en": "sha256",
+    "zh": []
+  },
+  "command": {
+    "en": "cmd",
+    "zh": [
+      "命令"
+    ]
+  },
+  "process": {
+    "en": "proc",
+    "zh": [
+      "进程"
+    ]
+  },
+  "file": {
+    "en": "file",
+    "zh": [
+      "文件"
+    ]
+  },
+  "threat": {
+    "en": "threat",
+    "zh": [
+      "威胁"
+    ]
+  },
+  "event": {
+    "en": "event",
+    "zh": [
+      "事件"
+    ]
+  },
+  "session": {
+    "en": "session",
+    "zh": [
+      "会话"
+    ]
+  },
+  "protocol": {
+    "en": "protocol",
+    "zh": [
+      "协议"
+    ]
+  },
+  "action": {
+    "en": "action",
+    "zh": [
+      "动作",
+      "操作"
+    ]
+  },
+  "result": {
+    "en": "result",
+    "zh": [
+      "结果"
+    ]
+  },
+  "status": {
+    "en": "status",
+    "zh": [
+      "状态"
+    ]
+  },
+  "desc": {
+    "en": "description",
+    "zh": [
+      "描述",
+      "说明"
+    ]
+  },
+  "container": {
+    "en": "container",
+    "zh": [
+      "容器"
+    ]
+  },
+  "vul": {
+    "en": "vul",
+    "zh": [
+      "漏洞"
+    ]
+  },
+  "malware": {
+    "en": "malware",
+    "zh": [
+      "恶意软件",
+      "病毒"
+    ]
+  },
+  "login": {
+    "en": "login",
+    "zh": [
+      "登录"
+    ]
+  },
+  "app": {
+    "en": "app",
+    "zh": [
+      "应用"
+    ]
+  },
+  "server": {
+    "en": "server",
+    "zh": [
+      "服务器"
+    ]
+  },
+  "db": {
+    "en": "db",
+    "zh": [
+      "数据库"
+    ]
+  },
+  "query": {
+    "en": "query",
+    "zh": [
+      "查询",
+      "命令"
+    ]
+  },
+  "extranet": {
+    "en": "extranet",
+    "zh": [
+      "外网"
+    ]
+  },
+  "inet": {
+    "en": "inet",
+    "zh": [
+      "外网"
+    ]
+  },
+  "host": {
+    "en": "host",
+    "zh": [
+      "主机"
+    ]
+  },
+  "proc": {
+    "en": "proc",
+    "zh": [
+      "进程"
+    ]
+  },
+  "ver": {
+    "en": "version",
+    "zh": [
+      "版本"
+    ]
+  },
+  "cmd": {
+    "en": "cmd",
+    "zh": [
+      "命令"
+    ]
+  },
+  "risk": {
+    "en": "risk",
+    "zh": [
+      "风险",
+      "等级"
+    ]
+  },
+  "method": {
+    "en": "method",
+    "zh": [
+      "HTTP方法",
+      "请求方法",
+      "HTTP动作"
+    ]
+  },
+  "referer": {
+    "en": "referer",
+    "zh": [
+      "来源页",
+      "引用页"
+    ]
+  },
+  "cookie": {
+    "en": "cookie",
+    "zh": [
+      "Cookie信息"
+    ]
+  },
+  "content_type": {
+    "en": "Content-Type",
+    "zh": [
+      "内容类型",
+      "MIME类型"
+    ]
+  },
+  "xff": {
+    "en": "X-Forwarded-For",
+    "zh": [
+      "代理转发IP",
+      "XFF"
+    ]
+  },
+  "body": {
+    "en": "body",
+    "zh": [
+      "请求体",
+      "响应体",
+      "HTTP请求体",
+      "HTTP响应体",
+      "POST数据",
+      "返回内容"
+    ]
+  },
+  "cdn": {
+    "en": "cdn",
+    "zh": [
+      "内容分发网络"
+    ]
+  },
+  "proxy": {
+    "en": "proxy",
+    "zh": [
+      "代理",
+      "代理服务器"
+    ]
+  },
+  "xff_port": {
+    "en": "X-Forwarded-Port",
+    "zh": [
+      "XFF端口"
+    ]
+  },
+  "setcookie": {
+    "en": "Set-Cookie",
+    "zh": [
+      "设置Cookie",
+      "响应Cookie"
+    ]
+  },
+  "x_real_ip": {
+    "en": "X-Real-IP",
+    "zh": [
+      "真实IP"
+    ]
+  },
+  "http_origin": {
+    "en": "Origin",
+    "zh": [
+      "源站"
+    ]
+  },
+  "query_type": {
+    "en": "QTYPE",
+    "zh": [
+      "查询类型",
+      "DNS查询类型"
+    ]
+  },
+  "resolved_ip": {
+    "en": "resolved_address",
+    "zh": [
+      "解析IP",
+      "DNS响应地址",
+      "A记录",
+      "DNS解析地址"
+    ]
+  },
+  "req": {
+    "en": "request",
+    "zh": [
+      "请求",
+      "HTTP请求"
+    ]
+  },
+  "res": {
+    "en": "response",
+    "zh": [
+      "响应",
+      "HTTP响应"
+    ]
+  },
+  "header": {
+    "en": "header",
+    "zh": [
+      "头",
+      "头部",
+      "HTTP头",
+      "请求头",
+      "响应头"
+    ]
+  },
+  "query_string": {
+    "en": "query",
+    "zh": [
+      "查询参数",
+      "URL参数"
+    ]
+  },
+  "victim": {
+    "en": "victim",
+    "zh": [
+      "受害者",
+      "受害方",
+      "被攻击者"
+    ]
+  },
+  "victim_ip": {
+    "en": "victim_ip",
+    "zh": [
+      "受害者IP",
+      "受害者地址"
+    ]
+  },
+  "victim_port": {
+    "en": "victim_port",
+    "zh": [
+      "受害者端口"
+    ]
+  },
+  "victim_num": {
+    "en": "victim_num",
+    "zh": [
+      "受害者数量",
+      "被攻击数量"
+    ]
+  },
+  "attacker": {
+    "en": "attacker",
+    "zh": [
+      "攻击者",
+      "攻击方",
+      "入侵者"
+    ]
+  },
+  "attack_ip": {
+    "en": "attack_ip",
+    "zh": [
+      "攻击者IP",
+      "攻击者地址",
+      "源攻击IP"
+    ]
+  },
+  "attack_port": {
+    "en": "attack_port",
+    "zh": [
+      "攻击者端口",
+      "源攻击端口"
+    ]
+  },
+  "attack_result": {
+    "en": "attack_result",
+    "zh": [
+      "攻击结果",
+      "攻击成败"
+    ]
+  },
+  "threat_level": {
+    "en": "severity",
+    "zh": [
+      "威胁级别",
+      "威胁等级",
+      "危险等级",
+      "threat_severity"
+    ]
+  },
+  "threat_score": {
+    "en": "risk_score",
+    "zh": [
+      "威胁分数",
+      "风险评分",
+      "威胁评分"
+    ]
+  },
+  "threat_name": {
+    "en": "threat_title",
+    "zh": [
+      "威胁名称",
+      "攻击名称",
+      "威胁标题"
+    ]
+  },
+  "attack_payload": {
+    "en": "payload",
+    "zh": [
+      "攻击载荷"
+    ]
+  },
+  "attack_tool": {
+    "en": "attack_tool",
+    "zh": [
+      "攻击工具",
+      "利用工具",
+      "exploit工具"
+    ]
+  },
+  "technique": {
+    "en": "technique",
+    "zh": [
+      "攻击技术",
+      "攻击手法",
+      "技术手法"
+    ]
+  },
+  "tactic": {
+    "en": "tactic",
+    "zh": [
+      "攻击战术",
+      "攻击策略"
+    ]
+  },
+  "ioc": {
+    "en": "indicators_of_compromise",
+    "zh": [
+      "威胁情报",
+      "IOC"
+    ]
+  },
+  "killchain": {
+    "en": "kill_chain",
+    "zh": [
+      "攻击链",
+      "杀伤链"
+    ]
+  },
+  "cve": {
+    "en": "cve",
+    "zh": [
+      "CVE编号",
+      "漏洞编号"
+    ]
+  },
+  "mail": {
+    "en": "email",
+    "zh": [
+      "邮件",
+      "邮件消息",
+      "邮件数据",
+      "MAIL"
+    ]
+  },
+  "email": {
+    "en": "MAIL",
+    "zh": [
+      "邮件",
+      "email",
+      "Email"
+    ]
+  },
+  "mail_sender": {
+    "en": "mail_from",
+    "zh": [
+      "发件人",
+      "发送者",
+      "邮件发件人",
+      "邮件发送者",
+      "发件方",
+      "返回路径",
+      "returnpath"
+    ]
+  },
+  "mail_receiver": {
+    "en": "mail_receiver",
+    "zh": [
+      "收件人",
+      "接收者",
+      "邮件收件人",
+      "邮件接收者",
+      "收件方"
+    ]
+  },
+  "mail_cc": {
+    "en": "carbon_copy",
+    "zh": [
+      "邮件抄送",
+      "抄送",
+      "邮件抄送人",
+      "抄送人",
+      "cc",
+      "CC"
+    ]
+  },
+  "mail_bcc": {
+    "en": "BCC",
+    "zh": [
+      "邮件密送",
+      "密送人",
+      "密送",
+      "邮件密送人",
+      "blind_carbon_copy"
+    ]
+  },
+  "mail_subject": {
+    "en": "Subject",
+    "zh": [
+      "邮件主题",
+      "邮件标题",
+      "主题",
+      "标题",
+      "邮件subject"
+    ]
+  },
+  "mail_text": {
+    "en": "plain",
+    "zh": [
+      "邮件正文",
+      "邮件内容",
+      "正文",
+      "内容",
+      "邮件体",
+      "纯文本"
+    ]
+  },
+  "mail_attachment": {
+    "en": "Attachment",
+    "zh": [
+      "邮件附件",
+      "附件"
+    ]
+  },
+  "attachment": {
+    "en": "attachment",
+    "zh": [
+      "附件",
+      "邮件附件"
+    ]
+  },
+  "mail_id": {
+    "en": "email_id",
+    "zh": [
+      "邮件UUID",
+      "邮件ID",
+      "邮件编号",
+      "邮件标识",
+      "msgUuid",
+      "ID",
+      "messageId",
+      "message_id",
+      "msg_uuid"
+    ]
+  },
+  "mail_server": {
+    "en": "mailserver",
+    "zh": [
+      "邮件服务器",
+      "发件服务器",
+      "邮件服务端",
+      "SMTP服务器"
+    ]
+  },
+  "mail_client": {
+    "en": "mail_client",
+    "zh": [
+      "邮件客户端",
+      "邮件软件",
+      "邮件程序",
+      "邮件应用"
+    ]
+  },
+  "original_mail_ip": {
+    "en": "original_mail_ip",
+    "zh": [
+      "原始发件人IP",
+      "发件人IP",
+      "源邮件IP"
+    ]
+  },
+  "mail_receiver_ip": {
+    "en": "mail_receiver_ip",
+    "zh": [
+      "收件人IP",
+      "接收者IP",
+      "目标邮件IP"
+    ]
+  },
+  "mail_server_ip": {
+    "en": "mail_server_ip",
+    "zh": [
+      "邮件服务器IP",
+      "邮件服务IP",
+      "SMTP服务器IP"
+    ]
+  },
+  "mail_cmd": {
+    "en": "mail_cmd",
+    "zh": [
+      "邮件操作命令",
+      "邮件命令",
+      "邮件操作",
+      "邮件动作"
+    ]
+  },
+  "mail_size": {
+    "en": "email_size",
+    "zh": [
+      "邮件尺寸",
+      "邮件size",
+      "大小",
+      "邮件大小"
+    ]
+  },
+  "mail_level": {
+    "en": "mail_level",
+    "zh": [
+      "邮件等级",
+      "邮件威胁等级",
+      "威胁等级",
+      "等级"
+    ]
+  },
+  "user_name": {
+    "en": "username",
+    "zh": [
+      "用户名",
+      "用户名称",
+      "姓名"
+    ]
+  },
+  "user_id": {
+    "en": "uid",
+    "zh": [
+      "用户ID",
+      "用户标识"
+    ]
+  },
+  "user_group": {
+    "en": "group_id",
+    "zh": [
+      "用户组",
+      "用户群组"
+    ]
+  },
+  "login_user": {
+    "en": "login_username",
+    "zh": [
+      "登录用户",
+      "登录账号"
+    ]
+  },
+  "user_domain": {
+    "en": "domain_user",
+    "zh": [
+      "用户域",
+      "域用户"
+    ]
+  },
+  "user_type": {
+    "en": "user_role",
+    "zh": [
+      "用户类型",
+      "用户角色"
+    ]
+  },
+  "user_status": {
+    "en": "account_status",
+    "zh": [
+      "用户状态",
+      "用户状态码"
+    ]
+  },
+  "host_name": {
+    "en": "hostname",
+    "zh": [
+      "主机名",
+      "主机名称",
+      "机器名",
+      "server_name"
+    ]
+  },
+  "host_id": {
+    "en": "hostid",
+    "zh": [
+      "主机ID",
+      "主机标识",
+      "server_id"
+    ]
+  },
+  "host_ip": {
+    "en": "server_ip",
+    "zh": [
+      "主机IP",
+      "主机地址",
+      "服务器IP"
+    ]
+  },
+  "host_type": {
+    "en": "host_category",
+    "zh": [
+      "主机类型",
+      "服务器类型"
+    ]
+  },
+  "host_os": {
+    "en": "server_os",
+    "zh": [
+      "主机操作系统",
+      "服务器系统"
+    ]
+  },
+  "host_group": {
+    "en": "server_group",
+    "zh": [
+      "主机组",
+      "服务器组"
+    ]
+  },
+  "host_status": {
+    "en": "host_state",
+    "zh": [
+      "主机状态",
+      "服务器状态"
+    ]
+  },
+  "src_port": {
+    "en": "source_port",
+    "zh": [
+      "源端口",
+      "源port"
+    ]
+  },
+  "dst_port": {
+    "en": "destination_port",
+    "zh": [
+      "目标端口",
+      "目的端口",
+      "目标port",
+      "目的port"
+    ]
+  },
+  "proto": {
+    "en": "protocol",
+    "zh": [
+      "协议",
+      "网络协议"
+    ]
+  },
+  "direction": {
+    "en": "flow_direction",
+    "zh": [
+      "方向",
+      "流量方向"
+    ]
+  },
+  "bytes_in": {
+    "en": "in_bytes",
+    "zh": [
+      "入字节",
+      "接收字节"
+    ]
+  },
+  "bytes_out": {
+    "en": "out_bytes",
+    "zh": [
+      "出字节",
+      "发送字节"
+    ]
+  },
+  "packets_in": {
+    "en": "in_packets",
+    "zh": [
+      "入包数",
+      "接收包数"
+    ]
+  },
+  "packets_out": {
+    "en": "out_packets",
+    "zh": [
+      "出包数",
+      "发送包数"
+    ]
+  },
+  "session_duration": {
+    "en": "session_time",
+    "zh": [
+      "会话时长",
+      "连接时长",
+      "connection_duration"
+    ]
+  },
+  "session_count": {
+    "en": "connection_count",
+    "zh": [
+      "会话数",
+      "连接数"
+    ]
+  },
+  "event_id": {
+    "en": "incident_id",
+    "zh": [
+      "事件ID",
+      "事件标识",
+      "告警ID"
+    ]
+  },
+  "event_name": {
+    "en": "event_title",
+    "zh": [
+      "事件名称",
+      "事件标题",
+      "告警名称"
+    ]
+  },
+  "event_type": {
+    "en": "event_category",
+    "zh": [
+      "事件类型",
+      "事件种类",
+      "告警类型"
+    ]
+  },
+  "event_level": {
+    "en": "event_severity",
+    "zh": [
+      "事件等级",
+      "事件级别",
+      "事件风险等级",
+      "告警等级"
+    ]
+  },
+  "event_status": {
+    "en": "event_state",
+    "zh": [
+      "事件状态",
+      "事件处理状态",
+      "告警状态"
+    ]
+  },
+  "event_source": {
+    "en": "event_origin",
+    "zh": [
+      "事件源",
+      "事件来源",
+      "告警源"
+    ]
+  },
+  "event_time": {
+    "en": "event_timestamp",
+    "zh": [
+      "事件时间",
+      "事件发生时间",
+      "告警时间"
+    ]
+  },
+  "event_desc": {
+    "en": "event_description",
+    "zh": [
+      "事件描述",
+      "事件说明",
+      "告警描述"
+    ]
+  },
+  "event_count": {
+    "en": "event_total",
+    "zh": [
+      "事件数量",
+      "事件统计",
+      "告警数量"
+    ]
+  },
+  "event_action": {
+    "en": "event_response",
+    "zh": [
+      "事件动作",
+      "处理动作",
+      "处置动作",
+      "动作"
+    ]
+  },
+  "threat_id": {
+    "en": "threat_uuid",
+    "zh": [
+      "威胁ID",
+      "威胁标识"
+    ]
+  },
+  "threat_type": {
+    "en": "threat_category",
+    "zh": [
+      "威胁类型",
+      "威胁种类",
+      "攻击类型"
+    ]
+  },
+  "threat_status": {
+    "en": "threat_state",
+    "zh": [
+      "威胁状态",
+      "威胁处理状态"
+    ]
+  },
+  "threat_source": {
+    "en": "attack_source",
+    "zh": [
+      "威胁源",
+      "威胁来源"
+    ]
+  },
+  "threat_desc": {
+    "en": "threat_description",
+    "zh": [
+      "威胁描述",
+      "威胁说明",
+      "攻击描述"
+    ]
+  },
+  "attack_technique": {
+    "en": "attack_method",
+    "zh": [
+      "攻击技术",
+      "攻击手法"
+    ]
+  },
+  "attack_tactic": {
+    "en": "attack_strategy",
+    "zh": [
+      "攻击战术",
+      "攻击策略"
+    ]
+  },
+  "process_id": {
+    "en": "proc_id",
+    "zh": [
+      "进程ID",
+      "进程号",
+      "PID"
+    ]
+  },
+  "process_cmdline": {
+    "en": "process_command",
+    "zh": [
+      "进程命令行",
+      "进程参数",
+      "cmd_line"
+    ]
+  },
+  "process_user": {
+    "en": "proc_user",
+    "zh": [
+      "进程用户",
+      "进程所属用户"
+    ]
+  },
+  "parent_name": {
+    "en": "parent_process_name",
+    "zh": [
+      "父进程名",
+      "父进程名称"
+    ]
+  },
+  "process_status": {
+    "en": "proc_state",
+    "zh": [
+      "进程状态",
+      "进程运行状态"
+    ]
+  },
+  "file_name": {
+    "en": "filename",
+    "zh": [
+      "文件名",
+      "文件名称",
+      "文件名字段"
+    ]
+  },
+  "file_path": {
+    "en": "filepath",
+    "zh": [
+      "文件路径",
+      "文件完整路径",
+      "文件位置"
+    ]
+  },
+  "file_size": {
+    "en": "filesize",
+    "zh": [
+      "文件大小",
+      "文件尺寸",
+      "文件size"
+    ]
+  },
+  "file_type": {
+    "en": "file_category",
+    "zh": [
+      "文件类型",
+      "文件种类",
+      "文件扩展名"
+    ]
+  },
+  "file_hash": {
+    "en": "filehash",
+    "zh": [
+      "文件哈希",
+      "文件指纹",
+      "文件校验值"
+    ]
+  },
+  "file_md5": {
+    "en": "md5_hash",
+    "zh": [
+      "文件MD5",
+      "文件MD5值"
+    ]
+  },
+  "file_sha256": {
+    "en": "sha256_hash",
+    "zh": [
+      "文件SHA256",
+      "文件SHA256值"
+    ]
+  },
+  "file_create_time": {
+    "en": "creation_time",
+    "zh": [
+      "文件创建时间",
+      "文件生成时间"
+    ]
+  },
+  "file_modify_time": {
+    "en": "modification_time",
+    "zh": [
+      "文件修改时间",
+      "文件更新时间"
+    ]
+  },
+  "http_method": {
+    "en": "request_method",
+    "zh": [
+      "HTTP方法",
+      "请求方法",
+      "http动作"
+    ]
+  },
+  "http_url": {
+    "en": "HTTP URL",
+    "zh": [
+      "请求URL",
+      "请求地址",
+      "request_url"
+    ]
+  },
+  "http_version": {
+    "en": "protocol_version",
+    "zh": [
+      "HTTP版本",
+      "协议版本"
+    ]
+  },
+  "http_user_agent": {
+    "en": "User-Agent",
+    "zh": [
+      "HTTP用户代理",
+      "客户端信息"
+    ]
+  },
+  "http_referer": {
+    "en": "Referer",
+    "zh": [
+      "HTTP来源",
+      "引用页",
+      "来源页面"
+    ]
+  },
+  "http_cookie": {
+    "en": "HTTP Cookie",
+    "zh": [
+      "Cookie信息",
+      "cookies"
+    ]
+  },
+  "http_content_type": {
+    "en": "Content-Type",
+    "zh": [
+      "HTTP内容类型",
+      "MIME类型"
+    ]
+  },
+  "http_status_code": {
+    "en": "status_code",
+    "zh": [
+      "HTTP状态码",
+      "响应状态码"
+    ]
+  },
+  "http_request_body": {
+    "en": "request_body",
+    "zh": [
+      "HTTP请求体",
+      "请求体",
+      "POST数据"
+    ]
+  },
+  "http_response_body": {
+    "en": "response_body",
+    "zh": [
+      "HTTP响应体",
+      "响应体",
+      "返回内容"
+    ]
+  },
+  "dns_query": {
+    "en": "dns_request",
+    "zh": [
+      "DNS查询",
+      "DNS请求",
+      "域名查询"
+    ]
+  },
+  "dns_answer": {
+    "en": "dns_response",
+    "zh": [
+      "DNS响应",
+      "DNS应答",
+      "域名响应"
+    ]
+  },
+  "dns_query_type": {
+    "en": "QTYPE",
+    "zh": [
+      "DNS查询类型",
+      "DNS请求类型"
+    ]
+  },
+  "dns_response_code": {
+    "en": "response_code",
+    "zh": [
+      "DNS响应码",
+      "DNS返回码",
+      "rcode"
+    ]
+  },
+  "dns_server": {
+    "en": "dns_server_ip",
+    "zh": [
+      "DNS服务器",
+      "域名服务器"
+    ]
+  },
+  "dns_domain": {
+    "en": "domain_name",
+    "zh": [
+      "DNS域名",
+      "域名"
+    ]
+  },
+  "dns_ttl": {
+    "en": "DNS TTL",
+    "zh": [
+      "生存时间",
+      "time_to_live"
+    ]
+  },
+  "mail_from": {
+    "en": "mail_from",
+    "zh": [
+      "邮件发件人",
+      "发送者",
+      "发件人地址"
+    ]
+  },
+  "mail_to": {
+    "en": "mail_to",
+    "zh": [
+      "邮件收件人",
+      "接收者",
+      "收件人地址"
+    ]
+  },
+  "mail_body": {
+    "en": "mail_content",
+    "zh": [
+      "邮件正文",
+      "邮件内容",
+      "邮件体"
+    ]
+  },
+  "mail_attachments": {
+    "en": "attachment_list",
+    "zh": [
+      "邮件附件",
+      "附件列表"
+    ]
+  },
+  "mail_date": {
+    "en": "mail_timestamp",
+    "zh": [
+      "邮件日期",
+      "邮件时间"
+    ]
+  },
+  "app_name": {
+    "en": "application",
+    "zh": [
+      "应用名称",
+      "应用程序"
+    ]
+  },
+  "app_version": {
+    "en": "application_version",
+    "zh": [
+      "应用版本",
+      "应用ver"
+    ]
+  },
+  "app_type": {
+    "en": "app_category",
+    "zh": [
+      "应用类型",
+      "应用种类"
+    ]
+  },
+  "app_status": {
+    "en": "application_state",
+    "zh": [
+      "应用状态",
+      "运行状态"
+    ]
+  },
+  "app_vendor": {
+    "en": "vendor",
+    "zh": [
+      "应用厂商",
+      "开发商"
+    ]
+  },
+  "app_path": {
+    "en": "installation_path",
+    "zh": [
+      "应用路径",
+      "安装路径"
+    ]
+  },
+  "app_port": {
+    "en": "service_port",
+    "zh": [
+      "应用端口",
+      "服务端口"
+    ]
+  },
+  "vuln_id": {
+    "en": "vulnerability_id",
+    "zh": [
+      "漏洞ID",
+      "漏洞编号",
+      "cve_id"
+    ]
+  },
+  "vuln_name": {
+    "en": "vulnerability_name",
+    "zh": [
+      "漏洞名称",
+      "漏洞标题"
+    ]
+  },
+  "vuln_type": {
+    "en": "vulnerability_type",
+    "zh": [
+      "漏洞类型",
+      "漏洞种类"
+    ]
+  },
+  "vuln_level": {
+    "en": "vulnerability_severity",
+    "zh": [
+      "漏洞等级",
+      "危险等级"
+    ]
+  },
+  "vuln_score": {
+    "en": "cvss_score",
+    "zh": [
+      "漏洞分数",
+      "CVSS评分"
+    ]
+  },
+  "vuln_desc": {
+    "en": "vulnerability_description",
+    "zh": [
+      "漏洞描述",
+      "漏洞说明"
+    ]
+  },
+  "cve_number": {
+    "en": "cve_code",
+    "zh": [
+      "CVE编号",
+      "CVE号"
+    ]
+  },
+  "affect_version": {
+    "en": "affected_version",
+    "zh": [
+      "影响版本",
+      "受影响版本"
+    ]
+  },
+  "addr": {
+    "en": "address",
+    "zh": []
+  },
+  "sip": {
+    "en": "source_ip",
+    "zh": []
+  },
+  "dip": {
+    "en": "destination_ip",
+    "zh": []
+  },
+  "dev": {
+    "en": "device",
+    "zh": []
+  },
+  "num": {
+    "en": "number",
+    "zh": []
+  },
+  "id": {
+    "en": "identifier",
+    "zh": []
+  },
+  "info": {
+    "en": "information",
+    "zh": []
+  },
+  "cnt": {
+    "en": "count",
+    "zh": []
+  },
+  "len": {
+    "en": "length",
+    "zh": []
+  },
+  "seq": {
+    "en": "sequence",
+    "zh": []
+  },
+  "ack": {
+    "en": "acknowledgement",
+    "zh": []
+  },
+  "syn": {
+    "en": "synchronize",
+    "zh": []
+  },
+  "pkt": {
+    "en": "packet",
+    "zh": []
+  },
+  "msg": {
+    "en": "message",
+    "zh": []
+  },
+  "cfg": {
+    "en": "configuration",
+    "zh": []
+  },
+  "max": {
+    "en": "maximum",
+    "zh": []
+  },
+  "min": {
+    "en": "minimum",
+    "zh": []
+  },
+  "avg": {
+    "en": "average",
+    "zh": []
+  },
+  "total": {
+    "en": "total",
+    "zh": []
+  },
+  "list": {
+    "en": "list",
+    "zh": []
+  },
+  "code": {
+    "en": "code",
+    "zh": []
+  },
+  "flag": {
+    "en": "flag",
+    "zh": []
+  },
+  "uri": {
+    "en": "uri",
+    "zh": []
+  },
+  "svc": {
+    "en": "service",
+    "zh": []
+  },
+  "loc": {
+    "en": "location",
+    "zh": []
+  },
+  "prov": {
+    "en": "province",
+    "zh": []
+  },
+  "cty": {
+    "en": "city",
+    "zh": []
+  },
+  "cntry": {
+    "en": "country",
+    "zh": []
+  },
+  "grp": {
+    "en": "group",
+    "zh": []
+  },
+  "usr": {
+    "en": "user",
+    "zh": []
+  },
+  "pwd": {
+    "en": "password",
+    "zh": []
+  },
+  "tgt": {
+    "en": "target",
+    "zh": []
+  },
+  "ref": {
+    "en": "reference",
+    "zh": []
+  },
+  "orig": {
+    "en": "origin",
+    "zh": []
+  },
+  "sub": {
+    "en": "sub",
+    "zh": []
+  },
+  "pub": {
+    "en": "public",
+    "zh": []
+  },
+  "priv": {
+    "en": "private",
+    "zh": []
+  },
+  "ext": {
+    "en": "external",
+    "zh": []
+  },
+  "int": {
+    "en": "internal",
+    "zh": []
+  },
+  "nat": {
+    "en": "network_address_translation",
+    "zh": []
+  },
+  "dhcp": {
+    "en": "dynamic_host_configuration_protocol",
+    "zh": []
+  },
+  "https": {
+    "en": "hypertext_transfer_protocol_secure",
+    "zh": []
+  },
+  "ftp": {
+    "en": "file_transfer_protocol",
+    "zh": []
+  },
+  "smtp": {
+    "en": "simple_mail_transfer_protocol",
+    "zh": []
+  },
+  "tcp": {
+    "en": "transmission_control_protocol",
+    "zh": []
+  },
+  "udp": {
+    "en": "user_datagram_protocol",
+    "zh": []
+  },
+  "icmp": {
+    "en": "internet_control_message_protocol",
+    "zh": []
+  },
+  "arp": {
+    "en": "address_resolution_protocol",
+    "zh": []
+  },
+  "vlan": {
+    "en": "virtual_local_area_network",
+    "zh": []
+  },
+  "vpn": {
+    "en": "virtual_private_network",
+    "zh": []
+  },
+  "os": {
+    "en": "operating_system",
+    "zh": []
+  },
+  "hw": {
+    "en": "hardware",
+    "zh": []
+  },
+  "sw": {
+    "en": "software",
+    "zh": []
+  },
+  "fw": {
+    "en": "firewall",
+    "zh": []
+  }
+}
