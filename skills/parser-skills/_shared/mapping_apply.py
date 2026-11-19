@@ -60,7 +60,7 @@ def mappable_indexes(entity: Mapping) -> List[str]:
 
 
 def collect_subrule_rules(entities: List[Mapping]) -> List[Dict[str, Any]]:
-    """B2：白板子规则 → 规则集（owner / 字段 / 解析器 / 样本）。"""
+    """白板路径：白板子规则 → 规则集（owner / 字段 / 解析器 / 样本）。"""
     rules: List[Dict[str, Any]] = []
     for entity in entities or []:
         fields = mappable_indexes(entity)
@@ -81,7 +81,7 @@ def collect_subrule_rules(entities: List[Mapping]) -> List[Dict[str, Any]]:
 
 
 def collect_config_rules(entities: List[Mapping]) -> List[Dict[str, Any]]:
-    """A6：配置 → 规则集（值画像用 normalize[].result 预览值）。"""
+    """配置路径：配置 → 规则集（值画像用 normalize[].result 预览值）。"""
     rules: List[Dict[str, Any]] = []
     for entity in entities or []:
         fields = mappable_indexes(entity)

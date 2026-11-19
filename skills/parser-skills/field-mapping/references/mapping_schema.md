@@ -42,7 +42,7 @@
 |---|---|
 | `fields[].field` | 待映射原始字段名（跨子规则 first-seen 保序；已映射与排除索引不出现） |
 | `enum_short_circuit` | `null` 或 `{"standard": "HTTP请求方法", "source": "exact\|synonym"}`——非空表示确定性命中，**跳过判定**，收口自动填 |
-| `value_profiles[]` | 按 owner（子规则/规则名）分组的值画像；`source`：`excel`（全量日志）/ `sample`（白板样本）/ `config_preview`（A6 预览值）；`values` 为计数降序前 10 |
+| `value_profiles[]` | 按 owner（子规则/规则名）分组的值画像；`source`：`excel`（全量日志）/ `sample`（白板样本）/ `config_preview`（配置预览值）；`values` 为计数降序前 10 |
 | `candidates[]` | Top-K（缺省 10，`--top-k` 可调，**两阶段须一致**——收口按开单候选集校验「候选外」）候选；`score` 1.0=精确层命中；`by_stripped` 非空表示经去前缀变体命中；黑名单四字段（事件名称/事件级别/日志类型/威胁类型）不出现在任何候选 |
 
 ## 2. mappings.json（宿主 agent 判定产物，收口输入）
@@ -63,10 +63,10 @@
 |---|---|
 | `mappings[].standard` | 该字段候选列表里的中文系统属性名，或字面量 `未匹配`；候选外/目录外/黑名单名会被收口降级为未匹配并记 `sanitized.degraded` |
 | 集合对齐 | 臆造字段名被裁剪（`trimmed`）、遗漏字段回填未匹配（`backfilled`）、重复判定 first-wins（`duplicates`）——均记入 stdout 摘要 |
-| `events[]` | 每条子规则至多一行；`event_name` 须 21 分类名单逐字命中；未知规则名/非法事件名跳过不写（摘要记 `events.unknown_rule` / `events.invalid_event`）；A6 路径无此段 |
+| `events[]` | 每条子规则至多一行；`event_name` 须 21 分类名单逐字命中；未知规则名/非法事件名跳过不写（摘要记 `events.unknown_rule` / `events.invalid_event`）；配置路径无此段 |
 | 裸数组 | mappings.json 顶层数组视为纯 mappings（无 events） |
 
-## 3. B2 产物
+## 3. 白板路径产物
 
 **`<输入名>.mapped_subrules.json`**——白板子规则数组，收口后每条：
 
@@ -82,7 +82,7 @@
 - `properties`：日志类型（log_type）+ 解析规则链（rule_name_list）+ 数据源三声明（product / log_vendor / data_source）；数据源固定值绑定 addFields 追加在 filter 末尾
 - 入口规则本身不含字段映射
 
-## 4. A6 产物
+## 4. 配置路径产物
 
 **`<输入名>.mapped_config.json`**——原配置数组（递归遍历所有 normalize）：
 
@@ -97,7 +97,7 @@
 | `enum_short_circuited` | 枚举短路字段数；`enum_overridden` 列出 agent 也误判了而被短路覆盖的字段 |
 | `sanitized` | `{trimmed, backfilled, degraded, duplicates}`；`degraded` 元素含 `reason`（映射目标黑名单 / 目录外名称 / 候选外） |
 | `conflicts` | 占用冲突组：`{standard, winner, winner_source(existing\|candidate), losers[]}` |
-| `events`（仅 B2） | `{annotated, unknown_rule[], invalid_event[]}` |
-| `output` / `export` | 结果 JSON 与 Base64 导出路径；B2 另有 `entry_output` / `entry_export` |
+| `events`（仅白板路径） | `{annotated, unknown_rule[], invalid_event[]}` |
+| `output` / `export` | 结果 JSON 与 Base64 导出路径；白板路径另有 `entry_output` / `entry_export` |
 
 **错误码**：`config_required`（规则文件缺失）/ `input_required`（判定/分类文件缺失）/ `invalid_config`（规则文件非数组）/ `invalid_input`（路径互斥缺失、契约不符、日志头+KV 缺 feature_identifier、厂商/产品缺失）。全部已映射时成功跳过（空候选单 / 零匹配产物照常输出），不报错。

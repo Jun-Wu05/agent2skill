@@ -2,22 +2,22 @@
 
 把解析规则里的原始字段映射到标准字段：你（宿主 agent）负责语义判定（每个字段从候选里挑一个中文标准字段名、每条子规则判一个事件名称），脚本负责候选检索、校验、占用裁决、写回、入口规则生成与导出。两条路径共用一对脚本：
 
-- **B2 白板路径**：log-classification 的白板子规则 → 填映射 + 事件标注 + 入口规则（完整规则链）
-- **A6 纯配置路径**：现成解析规则配置 → 只补空字段的映射（既有映射保留不动）
+- **白板路径**：日志类型提取（log-classification）产出的白板子规则 → 填映射 + 事件标注 + 入口规则（完整规则链）
+- **配置路径**：现成解析规则配置 → 只补空字段的映射（既有映射保留不动）
 
 ## 何时使用
 
 - 用户要求「字段映射 / 映射到标准字段 / 把 X 映射到 Y / 填白板 / 生成完整（可导入的）解析规则」
 - 上一步做过日志类型提取（白板子规则已产出），继续把字段填完
-- 用户上传现成配置，要求补齐其中未映射的字段（A6）
+- 用户上传现成配置，要求补齐其中未映射的字段（配置路径）
 
 ## 前置条件
 
-- **B2**：log-classification 产物 `<输入名>.subrules.json` + `<输入名>.classified.json`（见其 guide 第 5 步）；向用户问清**数据源厂商与产品**（入口规则必填，缺失整单拒绝）
-- **A6**：配置族文件（Base64 txt / 原生 JSON / TXT，规则数组）
+- **白板路径**：日志类型提取产物 `<输入名>.subrules.json` + `<输入名>.classified.json`（见其 guide 第 5 步）；向用户问清**数据源厂商与产品**（入口规则必填，缺失整单拒绝）
+- **配置路径**：配置族文件（Base64 txt / 原生 JSON / TXT，规则数组）
 - 标准字段目录（625 条）与同义词/标签资产随技能仓库提供，脚本自动定位，无需用户输入
 
-## B2 标准流程（五步，每步有完成判据）
+## 白板路径标准流程（五步，每步有完成判据）
 
 ### 第 1 步：确认输入与版本守卫
 
@@ -90,10 +90,10 @@ python <parser-skills>/field-mapping/scripts/mapping_finalize.py \
 
 **完成判据**：`sanitized` / `conflicts` / `events` 三处无意外项；匹配成功数与预期一致。
 
-## A6 流程（三步）
+## 配置路径流程（三步）
 
 1. `python <parser-skills>/field-mapping/scripts/mapping_candidates.py --config <配置文件>`（值画像用配置 normalize 预览值；全部已映射时成功跳过——空候选单，如实告知）
-2. 同 B2 第 3 步写 mappings.json（**只写 mappings 段，无 events**——A6 不做事件标注）
+2. 同白板路径第 3 步写 mappings.json（**只写 mappings 段，无 events**——配置路径不做事件标注）
 3. `python <parser-skills>/field-mapping/scripts/mapping_finalize.py --config <配置文件> --mappings mappings.json`
 
 产物：`<输入名>.mapped_config.json` + `fieldmapped_config_YYYYMMDD_HHMM.txt`。既有映射（field 非空的条目）原样保留且在占用裁决中恒赢。
@@ -107,7 +107,7 @@ python <parser-skills>/field-mapping/scripts/mapping_finalize.py \
 **不支持与边界**：
 
 - **日志头+KV** 格式的入口规则需要日志头正则（feature_identifier），当前分类产物不提供——收口整单拒绝并明示；先用日志头+KV 之外的格式，或与用户商定暂缓
-- A6 不做事件标注、不生成入口规则（配置自身已有路由结构）
+- 配置路径不做事件标注、不生成入口规则（配置自身已有路由结构）
 - 操作类型字段（登录/审计等 7 类的细分）不在本版——事件标注只写事件名称+事件级别
 - 枚举字段的**值映射**（如 `GET→成功`）是 enum-mapping 子模块的范围，本流程只判字段归属
 - 手动调整已有映射（改判单个字段、清除映射）是独立子命令，另立票据交付

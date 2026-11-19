@@ -4,7 +4,7 @@ description: 解析规则技能集 - 日志解析规则（Base64 配置/JSON/TXT
 license: MIT
 metadata:
   version: "0.9.0"
-  status: 字段调整-添加/删除/合并/base64 解码/正则提取字段、日志类型提取、标准字段映射（A6 纯配置 / B2 白板 + 入口规则 + 事件标注）已实现；其余子模块交付中
+  status: 字段调整-添加/删除/合并/base64 解码/正则提取字段、日志类型提取、标准字段映射（白板路径 + 现成配置补映射 + 入口规则 + 事件标注）已实现；其余子模块交付中
 ---
 
 # 解析规则技能集（parser-skills）
@@ -17,7 +17,7 @@ metadata:
 |---|---|---|---|
 | 添加字段 / 新增字段 / 插入字段；设置事件名称；删除字段 / 移除字段；合并字段 / 把 X 和 Y 合并；base64 解码 / 解码字段；正则提取 / 从某字段提取 X | **field-adjust**（字段调整） | ✅ 添加/删除/合并/base64 解码/正则提取可用 | [field-adjust/guide.md](field-adjust/guide.md)，脚本 `field-adjust/scripts/` |
 | 日志类型 / 把 X 当作日志类型 / 区分日志类型 / 从日志数据生成解析规则 | **log-classification**（日志类型提取） | ✅ 特征统计 + 分类收口 + 白板子规则可用 | [log-classification/guide.md](log-classification/guide.md)，脚本 `log-classification/scripts/` |
-| 字段映射 / 映射到标准字段 / X 映射到 Y（填白板、生成完整规则） | **field-mapping**（标准字段映射） | ✅ 候选开单 + 收口（A6 纯配置 / B2 白板）+ 入口规则 + 事件标注可用 | [field-mapping/guide.md](field-mapping/guide.md)，脚本 `field-mapping/scripts/` |
+| 字段映射 / 映射到标准字段 / X 映射到 Y（填白板、生成完整规则） | **field-mapping**（标准字段映射） | ✅ 候选开单 + 收口（白板路径 / 现成配置双路径）+ 入口规则 + 事件标注可用 | [field-mapping/guide.md](field-mapping/guide.md)，脚本 `field-mapping/scripts/` |
 | 提取 X 的枚举值 / 填充 / 取消映射 | enum-mapping（枚举提取与填充） | 交付中 | — |
 | 威胁类型 / 映射到威胁类型 | threat-type（威胁类型链路） | 交付中 | — |
 
@@ -40,4 +40,4 @@ metadata:
 
 - **field-adjust**：对解析规则配置做字段增删改（五子命令共用 CLI 骨架，守卫链拦截危险操作，支持按子规则名/威胁组寻址）。用法、参数、守卫与示例见 [field-adjust/guide.md](field-adjust/guide.md)。
 - **log-classification**：Excel 日志表 → agent 判格式与特征字段 → 脚本①全量统计 → agent 语义归类 → 脚本②收口出分类结果 + 白板子规则 + Base64 导出。标准流程五步与判定清单见 [log-classification/guide.md](log-classification/guide.md)。
-- **field-mapping**：白板子规则/配置中的待映射字段 → 脚本①开候选单（Top-10 + 值画像 + 枚举短路）→ agent 逐字段判定与事件名称判定 → 脚本②收口（sanitize + 占用裁决 + 写回 + 入口规则 + 导出）。A6/B2 双路径流程见 [field-mapping/guide.md](field-mapping/guide.md)。
+- **field-mapping**：白板子规则/配置中的待映射字段 → 脚本①开候选单（Top-10 + 值画像 + 枚举短路）→ agent 逐字段判定与事件名称判定 → 脚本②收口（sanitize + 占用裁决 + 写回 + 入口规则 + 导出）。双路径流程见 [field-mapping/guide.md](field-mapping/guide.md)。

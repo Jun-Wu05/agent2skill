@@ -1,7 +1,8 @@
-"""rule_gen 单元测试：规则骨架模板与子规则装配（照工作台 rule_generator 复刻）。
+"""rule_gen 单元测试：规则骨架模板与子规则/入口规则装配。
 
-接缝：get_sub_rule_template / value_to_str / escape_delimit /
-generate_sub_rules（输入为工作台兼容的 classification dict）。
+接缝：get_sub_rule_template / get_entry_rule_template / value_to_str /
+escape_delimit / generate_sub_rules / generate_entry_rule（输入为平台
+兼容的 classification dict）。
 """
 
 from __future__ import annotations

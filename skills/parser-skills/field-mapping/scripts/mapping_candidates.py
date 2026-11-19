@@ -1,18 +1,19 @@
 """映射候选开单 - 为待映射字段产出 Top-K 标准字段候选与值画像。
 
 field-mapping 技能的阶段①脚本（开单）：确定性检索标准字段目录，为白板子规则
-（B2 路径）或解析规则配置（A6 路径）中的每个待映射字段产出 Top-K 候选（附
+（白板路径）或解析规则配置（配置路径）中的每个待映射字段产出 Top-K 候选（附
 目录元数据）、值画像与枚举字段短路标记，交宿主 agent 判断；agent 的判定产物
 （mappings.json 契约见 guide.md）由阶段②（mapping_finalize.py）收口。
 
-值画像分级（裁决）：B2 给 --excel 时用全量日志（json 规则逐行解析 JSON 体、
-kv 规则逐行提取键值），未给或解析器不支持时退回白板子规则自带样本；A6 用
+值画像分级：白板路径给 --excel 时用全量日志（json 规则逐行解析 JSON 体、
+kv 规则逐行提取键值），未给或解析器不支持时退回白板子规则自带样本；配置
+路径用
 配置 normalize[].result 预览值。
 
 CLI 用法:
-    B2 白板路径:  python mapping_candidates.py --subrules <白板.subrules.json>
+    白板路径:  python mapping_candidates.py --subrules <白板.subrules.json>
                                     [--excel <日志数据表.xlsx>]
-    A6 配置路径:  python mapping_candidates.py --config <配置文件>
+    配置路径:  python mapping_candidates.py --config <配置文件>
     通用:         [--output <候选.json>] [--top-k 10]
 
 输入支持: --subrules / --config 均为规则 JSON 数组（Base64 txt / 原生 JSON /
@@ -178,7 +179,7 @@ def build_sample_profiles(rules: List[dict]) -> Dict[str, List[dict]]:
 
 
 def build_config_profiles(rules: List[dict]) -> Dict[str, List[dict]]:
-    """配置画像：A6 用 normalize[].result 预览值。"""
+    """配置画像：配置路径用 normalize[].result 预览值。"""
     profiles: Dict[str, List[dict]] = {}
     for rule in rules:
         for field in rule["fields"]:
@@ -194,7 +195,7 @@ def build_config_profiles(rules: List[dict]) -> Dict[str, List[dict]]:
 def build_b2_profiles(
     rules: List[dict], raw_lines: Optional[List[str]]
 ) -> Dict[str, List[dict]]:
-    """B2 值画像分级：全量日志 > 样本兜底。"""
+    """白板路径值画像分级：全量日志 > 样本兜底。"""
     if raw_lines is None:
         return build_sample_profiles(rules)
     profiles = build_excel_profiles(rules, raw_lines)
@@ -260,10 +261,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         prog="mapping_candidates.py",
         description="映射候选开单：待映射字段 → Top-K 候选 + 值画像 + 枚举短路标记（阶段①：开单）",
     )
-    parser.add_argument("--subrules", default=None, help="B2 白板子规则 JSON 路径")
-    parser.add_argument("--config", default=None, help="A6 配置文件路径（Base64/JSON/TXT）")
+    parser.add_argument("--subrules", default=None, help="白板子规则 JSON 路径（白板路径）")
+    parser.add_argument("--config", default=None, help="配置文件路径（配置路径，Base64/JSON/TXT）")
     parser.add_argument(
-        "--excel", default=None, help="B2 日志数据表 Excel 路径（可选；给全量日志算值画像）"
+        "--excel", default=None, help="日志数据表 Excel 路径（可选；给全量日志算值画像）"
     )
     parser.add_argument(
         "--output", "-o", default=None,
@@ -278,7 +279,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if bool(args.subrules) == bool(args.config):
         return _print_error(
             "invalid_input",
-            "必须且只能指定 --subrules（B2 白板路径）或 --config（A6 配置路径）之一",
+            "必须且只能指定 --subrules（白板路径）或 --config（配置路径）之一",
         )
 
     input_path = Path(args.subrules or args.config)

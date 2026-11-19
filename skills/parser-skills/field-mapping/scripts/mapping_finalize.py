@@ -6,14 +6,14 @@ field-mapping 技能的阶段②脚本（收口）：宿主 agent 读取阶段�
 名单内）。本脚本做确定性收口——sanitize（裁剪臆造/回填遗漏/黑名单与
 候选外降级）、枚举字段短路合并（自动判定优先）、一对一占用裁决（既有
 映射恒赢 → 精确命中 → 相似度 → 原行序）、写回、事件标注（级别查表
-绑定、非法不写）与入口规则生成（B2），并按平台下载命名导出 Base64。
+绑定、非法不写）与入口规则生成（白板路径），并按平台下载命名导出 Base64。
 
 CLI 用法:
-    B2 白板路径:  python mapping_finalize.py --subrules <白板.subrules.json>
+    白板路径:  python mapping_finalize.py --subrules <白板.subrules.json>
                                     --classified <分类结果.json> --mappings <判定.json>
                                     --vendor <厂商> --product <产品>
                                     [--output ...] [--entry-output ...] [--no-export]
-    A6 配置路径:  python mapping_finalize.py --config <配置文件> --mappings <判定.json>
+    配置路径:  python mapping_finalize.py --config <配置文件> --mappings <判定.json>
                                     [--output ...] [--no-export]
 
 mappings.json 契约（宿主 agent 语义层）:
@@ -22,10 +22,10 @@ mappings.json 契约（宿主 agent 语义层）:
     （裸数组视为纯 mappings，无 events）
 
 输出:
-    B2: 映射后子规则 JSON（缺省 <输入名>.mapped_subrules.json）+ 入口规则 JSON
+    白板路径: 映射后子规则 JSON（缺省 <输入名>.mapped_subrules.json）+ 入口规则 JSON
         （缺省 <输入名>.entry_rules.json）+ Base64 导出
         （mappedconfig_subrules_YYYYMMDD_HHMM.txt / mappedconfig_mainrules_YYYYMMDD_HHMM.txt）
-    A6: 映射后配置 JSON（缺省 <输入名>.mapped_config.json）+ Base64 导出
+    配置路径: 映射后配置 JSON（缺省 <输入名>.mapped_config.json）+ Base64 导出
         （fieldmapped_config_YYYYMMDD_HHMM.txt）
     两者均附 stdout JSON 摘要（映射/未匹配/短路/sanitize/冲突/事件统计）。
 
@@ -151,14 +151,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         prog="mapping_finalize.py",
         description="映射收口：sanitize + 占用裁决 + 写回 + 事件标注 + 入口规则 + 导出（阶段②：收口）",
     )
-    parser.add_argument("--subrules", default=None, help="B2 白板子规则 JSON 路径")
-    parser.add_argument("--config", default=None, help="A6 配置文件路径（Base64/JSON/TXT）")
+    parser.add_argument("--subrules", default=None, help="白板子规则 JSON 路径（白板路径）")
+    parser.add_argument("--config", default=None, help="配置文件路径（配置路径，Base64/JSON/TXT）")
     parser.add_argument("--mappings", required=True, help="宿主 agent 判定 JSON 路径")
-    parser.add_argument("--classified", default=None, help="B2 分类结果 JSON 路径（log-classification 产物）")
-    parser.add_argument("--vendor", default=None, help="B2 数据源厂商（必填）")
-    parser.add_argument("--product", default=None, help="B2 数据源产品（必填）")
-    parser.add_argument("--output", "-o", default=None, help="映射结果 JSON 输出路径（缺省按模式命名）")
-    parser.add_argument("--entry-output", default=None, help="入口规则 JSON 输出路径（仅 B2，缺省 <输入名>.entry_rules.json）")
+    parser.add_argument("--classified", default=None, help="分类结果 JSON 路径（log-classification 产物，白板路径必填）")
+    parser.add_argument("--vendor", default=None, help="数据源厂商（白板路径必填）")
+    parser.add_argument("--product", default=None, help="数据源产品（白板路径必填）")
+    parser.add_argument("--output", "-o", default=None, help="映射结果 JSON 输出路径（缺省按路径命名）")
+    parser.add_argument("--entry-output", default=None, help="入口规则 JSON 输出路径（仅白板路径，缺省 <输入名>.entry_rules.json）")
     parser.add_argument("--no-export", action="store_true", help="不产出 Base64 导出文件（缺省会一并产出）")
     parser.add_argument("--top-k", type=int, default=DEFAULT_TOP_K, help=f"候选校验上限，与阶段①一致（缺省 {DEFAULT_TOP_K}）")
     args = parser.parse_args(argv)
@@ -166,7 +166,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if bool(args.subrules) == bool(args.config):
         return _print_error(
             "invalid_input",
-            "必须且只能指定 --subrules（B2 白板路径）或 --config（A6 配置路径）之一",
+            "必须且只能指定 --subrules（白板路径）或 --config（配置路径）之一",
         )
 
     mappings_raw, err = _load_json_file(args.mappings, "判定文件")
@@ -197,7 +197,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         if missing:
             return _print_error(
                 "invalid_input",
-                f"B2 白板路径必须提供 {'、'.join(missing)}（厂商/产品用于入口规则与数据源字段）",
+                f"白板路径必须提供 {'、'.join(missing)}（厂商/产品用于入口规则与数据源字段）",
             )
         classification, err = _load_json_file(args.classified, "分类结果")
         if err is not None:
