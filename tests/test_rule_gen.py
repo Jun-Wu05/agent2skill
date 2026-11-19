@@ -165,6 +165,16 @@ class GenerateSubRulesKvTest(unittest.TestCase):
         logtype_entry = rule["normalize"][-1]
         self.assertEqual(logtype_entry["result"], ["attack"])
 
+    def test_exact_match_empty_does_not_fall_back_to_all_lines(self):
+        # 精确匹配（line_matcher）命中零行时不得回退全量行——那会把其他
+        # 类型的字段并进本子规则 normalize，掩盖匹配失败
+        rules = rule_gen.generate_sub_rules(
+            _kv_classification(), "type:attack||src:1.1.1.1",
+            line_matcher=lambda logtype, line: False,
+        )
+        indexes = [e["index"] for e in rules[0]["normalize"]]
+        self.assertEqual(indexes, ["日志类型"])
+
     def test_common_fields_filled(self):
         rule = self.rules[0]
         self.assertTrue(rule["id"])

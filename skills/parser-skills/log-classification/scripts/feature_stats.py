@@ -17,7 +17,7 @@ CLI 用法:
 输入: Excel 数据表（须含「原始日志」列）
 输出: 统计报告 JSON（缺省 <输入名>.stats.json）+ stdout JSON 摘要
 
-数据裁决（照工作台 #259/#121 移植，全部确定性）:
+数据裁决（全部确定性，逐项记入报告 adjudications 字段供宿主 agent 核对）:
 - 声称 kv 分隔符零匹配且字段分隔符为空白时，对称重试另一种键值分隔符；
 - 声称字段分隔符零匹配时，对候选集（声称值 + 常见符号 + 数据派生）逐个
   用特征键行覆盖率探针打分，取最高且达阈值者重试聚合；
@@ -37,6 +37,7 @@ _SKILLS_ROOT = Path(__file__).resolve().parents[2]
 if str(_SKILLS_ROOT) not in sys.path:
     sys.path.insert(0, str(_SKILLS_ROOT))
 
+from _shared import report as skill_report
 from _shared.log_extract import (
     BODY_KEY_COVERAGE_THRESHOLD,
     KvValueExtractor,
@@ -50,11 +51,7 @@ from _shared.log_input import LogInputError, load_log_table
 
 
 def _print_error(code: str, message: str) -> int:
-    print(json.dumps(
-        {"status": "error", "code": code, "message": message},
-        ensure_ascii=False, indent=2,
-    ))
-    return 1
+    return skill_report.print_error(code, message)
 
 
 def _strip_header_lines(

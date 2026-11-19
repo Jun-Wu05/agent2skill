@@ -72,7 +72,7 @@ python <parser-skills>/log-classification/scripts/classify_finalize.py \
 
 | 产物 | 文件 | 用途 |
 |---|---|---|
-| 分类结果 | `<输入名>.classified.json` | 工作台兼容 schema，含每类型计数/样本/覆盖率 |
+| 分类结果 | `<输入名>.classified.json` | 平台兼容 schema，含每类型计数/样本/覆盖率 |
 | 白板子规则 | `<输入名>.subrules.json` | 每特征值一条无映射子规则，field-mapping 的输入 |
 | Base64 导出 | `unmappedconfig_subrules_YYYYMMDD_HHMM.txt` | 平台可导入（`--no-export` 跳过） |
 

@@ -28,7 +28,7 @@
 
 ## classified.json（阶段②产物，`<输入名>.classified.json`）
 
-工作台 log_classifier 兼容 schema：
+平台兼容 schema：
 
 | 字段 | 说明 |
 |---|---|

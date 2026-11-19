@@ -3,7 +3,7 @@
 log-classification 技能的阶段②脚本（文书）：宿主 agent 读取阶段①
 （feature_stats.py）产出的统计报告后，为每个特征值写业务含义标注
 （labels.json），本脚本做确定性的收口——集合对齐（裁剪臆造/回填遗漏）、
-真实样本回配、覆盖校验、装配分类结果 JSON（工作台兼容 schema）与
+真实样本回配、覆盖校验、装配分类结果 JSON（平台兼容 schema）与
 白板子规则（每特征值一条无映射子规则骨架），并按平台下载命名导出
 Base64 文件。
 
@@ -15,7 +15,7 @@ CLI 用法:
                                 [--no-export]
 
 labels.json 契约（宿主 agent 语义层，logtype 必须严格等于统计报告中的
-特征值——工作台 log_classify_feature prompt 同款约束）:
+特征值）:
     {"classification_details": [{"logtype": "<特征值>", "meaning": "<业务含义>"}]}
     （也接受裸数组 [{"logtype": ..., "meaning": ...}]）
 
@@ -51,11 +51,7 @@ from _shared.rule_gen import generate_sub_rules
 
 
 def _print_error(code: str, message: str) -> int:
-    print(json.dumps(
-        {"status": "error", "code": code, "message": message},
-        ensure_ascii=False, indent=2,
-    ))
-    return 1
+    return skill_report.print_error(code, message)
 
 
 def _load_json_file(path: str, what: str):
@@ -91,7 +87,7 @@ def _normalize_labels(raw) -> List[Dict[str, str]]:
 def sanitize_details(
     labels: List[Dict[str, str]], stats: dict,
 ) -> tuple:
-    """集合对齐（照工作台 sanitize 复刻）：裁剪臆造、回填遗漏。
+    """集合对齐：裁剪臆造、回填遗漏。
 
     返回 (details, notes)：details 按统计报告的值序（计数降序）排列，
     notes = {"trimmed": [...], "backfilled": [...]} 供 agent 核对。
@@ -145,7 +141,7 @@ def _build_body_extractor(stats: dict) -> Callable[[str], object]:
 
 
 def match_real_samples(details: List[dict], raw_lines: List[str], stats: dict) -> None:
-    """用真实日志行回配 sample / real_samples（照工作台 match_real_samples 复刻）。
+    """用真实日志行回配 sample / real_samples。
 
     每个特征值取第一条命中行作 sample；real_samples 为日志体（JSON 取
     {...}，KV 按有效 marker 剥头，无标记取整行）。
@@ -183,7 +179,7 @@ def match_real_samples(details: List[dict], raw_lines: List[str], stats: dict) -
 def build_classification(
     stats: dict, details: List[dict], sanitize_notes: dict,
 ) -> dict:
-    """装配工作台兼容的分类结果 JSON。"""
+    """装配平台兼容的分类结果 JSON。"""
     log_format = stats.get("log_format", "")
     marker = stats.get("header_end_marker", "")
     context = stats.get("format_context") or {}
@@ -308,9 +304,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     classification["input"] = str(input_path)
     classification["sheet"] = table["sheet"]
 
-    # 4. 白板子规则：行归属用特征值精确匹配（强于工作台子串匹配）
+    # 4. 白板子规则：行归属用特征值精确匹配
+    extract_line = _build_body_extractor(stats)
+
     def line_matcher(logtype: str, line: str) -> bool:
-        _body, value = _build_body_extractor(stats)(line)
+        _body, value = extract_line(line)
         return value is not None and str(value) == logtype
 
     subrules = generate_sub_rules(

@@ -1,15 +1,14 @@
 """规则骨架与装配：子规则模板、normalize 条目构建、白板子规则生成。
 
-照工作台 ToolWithAgent 的 rule_generator（templates / normalize /
-filters / utils / core）复刻的离线版本。log-classification 生成白板
-子规则（无字段映射）、field-mapping 后续填充映射与生成入口规则都必须
-经过本模块，禁止复制。
+纯离线实现（无外部进程、无 LLM API 依赖）。log-classification 生成
+白板子规则（无字段映射）、field-mapping 后续填充映射与生成入口规则都
+必须经过本模块，禁止复制。
 
-与工作台的差异（记录在案）：
-- KV 子规则 normalize 的行过滤用**特征值精确匹配**（finalize 传入
-  line_matcher），替代工作台的 logtype 子串匹配——精确匹配严格更强；
-- 语义化分隔符 "space" 在本仓的 stats 报告中以真实空白表示，
-  escape_delimit 仍保留工作台的映射表。
+设计取舍（记录在案，出处见 issue tracker #10）：
+- KV 子规则 normalize 的行过滤默认用 logtype 子串匹配，调用方可传
+  line_matcher 升级为特征值精确匹配（严格更强）；
+- 精确匹配命中零行时**不回退全量行**——那会把其他类型的字段并进本
+  子规则，掩盖匹配失败（normalize 只剩日志类型条目，失败可见）。
 """
 
 from __future__ import annotations
@@ -23,7 +22,7 @@ from typing import Any, Callable, Dict, List, Optional
 from _shared.log_extract import extract_kv_keys
 
 # ---------------------------------------------------------------------------
-# 模板（照工作台 templates.py 原样复刻）
+# 模板
 # ---------------------------------------------------------------------------
 
 _SUB_RULE_TEMPLATE: Dict[str, Any] = {
@@ -74,7 +73,7 @@ def get_sub_rule_template() -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# 工具（照工作台 rule_generator/utils.py 复刻）
+# 工具
 # ---------------------------------------------------------------------------
 
 def now_ms() -> int:
@@ -114,7 +113,7 @@ def escape_delimit(delimit: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# normalize 条目构建（照工作台 rule_generator/normalize.py 复刻）
+# normalize 条目构建
 # ---------------------------------------------------------------------------
 
 def make_kv_normalize_entry(index: str, value: Any) -> Dict[str, Any]:
@@ -206,7 +205,7 @@ def build_kv_normalize_entries_from_lines(
 
 
 # ---------------------------------------------------------------------------
-# 子规则生成（照工作台 rule_generator/core.py 的 generate_sub_rule 复刻）
+# 子规则生成
 # ---------------------------------------------------------------------------
 
 def _build_sub_rule_name(
@@ -255,13 +254,11 @@ def generate_sub_rule(
     is_kv: bool = False,
     feature_field: str = "",
     line_matcher: Optional[Callable[[str, str], bool]] = None,
-    date_str: str = "",
-    uuid_str: str = "",
 ) -> Dict[str, Any]:
     """为单条 classification_detail 生成一条白板子规则。
 
-    line_matcher(logtype, line) -> bool：判定日志行归属（精确特征值
-    匹配）；缺省时用 logtype 子串匹配（工作台行为）。
+    line_matcher(logtype, line) -> bool：判定日志行归属（特征值精确
+    匹配）；缺省时用 logtype 子串匹配。
     """
     logtype = detail.get("logtype", "")
     rule_name = _build_sub_rule_name(
@@ -272,12 +269,8 @@ def generate_sub_rule(
     parser_name = "json" if is_json else _resolve_sub_parser_name(analysis)
     rule = get_sub_rule_template()
 
-    if not date_str:
-        date_str = time.strftime("%Y%m%d")
-    if not uuid_str:
-        uuid_str = new_uuid()
     ts = now_ms()
-    rule["id"] = uuid_str
+    rule["id"] = new_uuid()
     rule["name"] = rule_name
     rule["description"] = rule_name
     rule["sample"] = sample
@@ -303,11 +296,10 @@ def generate_sub_rule(
     elif is_kv and all_logs_str:
         lines = [line for line in all_logs_str.split("\n") if line.strip()]
         if line_matcher is not None:
+            # 精确匹配：命中零行不回退全量（失败可见，normalize 只剩日志类型）
             filtered = [line for line in lines if line_matcher(logtype, line)]
         else:
-            filtered = [line for line in lines if logtype in line]
-        if not filtered:
-            filtered = lines
+            filtered = [line for line in lines if logtype in line] or lines
         rule["normalize"] = build_kv_normalize_entries_from_lines(
             filtered, logtype,
             delimit=analysis.get("delimit", " "),

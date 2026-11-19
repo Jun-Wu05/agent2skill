@@ -31,7 +31,7 @@ metadata:
 ## 通用约定（所有子模块一致）
 
 - **输入**：配置族文件（Base64 txt / 原生 JSON / TXT，内容为 mapping entities 的 JSON 数组，自动识别解码）或日志数据文件（Excel，第一张工作表须含「原始日志」列）
-- **输出**：修改/生成类操作运行后即产出——①结果 JSON（子模块间文件衔接的产物，如 `<输入名>.modified.json` / `.subrules.json`）②平台可导入的 Base64 文件（命名兼容工作台下载契约，如 `fieldadjusted_config_YYYYMMDD_HHMM.txt` / `unmappedconfig_subrules_YYYYMMDD_HHMM.txt`）③stdout JSON 摘要（`status` / `message` / 产物路径）
+- **输出**：修改/生成类操作运行后即产出——①结果 JSON（子模块间文件衔接的产物，如 `<输入名>.modified.json` / `.subrules.json`）②平台可导入的 Base64 文件（命名兼容平台下载契约，如 `fieldadjusted_config_YYYYMMDD_HHMM.txt` / `unmappedconfig_subrules_YYYYMMDD_HHMM.txt`）③stdout JSON 摘要（`status` / `message` / 产物路径）
 - **不原地覆盖输入文件**；错误码稳定（`config_required` / `input_required` / `invalid_config` / `invalid_input` / `field_conflict` / `invalid_event_name` / `event_level_conflict` / `reserved_field_rejected` / `rule_name_not_found` / `event_annotation_required` / `field_reference_conflict` / `field_not_found` / `invalid_pattern` / `pattern_mismatch` 等），失败退出码 1
 - **共享底座 `_shared/`**：config_io.py（配置族解码/编码）、log_input.py（Excel 数据族读取）、log_extract.py（JSON/KV 特征提取与聚合）、rule_gen.py（规则骨架与装配）、report.py（统一输出与导出命名）、event_binding.py（事件名称 21 分类绑定表）、entity_scope.py（target/group 寻址解析）、field_policy.py（系统保留字段）、cli.py（field-adjust 子命令 CLI 骨架）——子模块脚本共用，禁止复制
 - 脚本路径相对本技能基目录 `<parser-skills>` 书写（agent 加载本技能时已知；在源仓库内即 `skills/parser-skills`），不依赖会话 cwd
