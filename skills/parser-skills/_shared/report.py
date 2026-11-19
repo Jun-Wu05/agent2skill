@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -16,9 +17,22 @@ DOWNLOAD_NAME_TEMPLATES: dict[str, str] = {
     # 产物类型 → 文件名模板（{timestamp} 占位），随增量扩充
     "current_config": "current_config_{timestamp}.txt",
     "field_adjusted_config": "fieldadjusted_config_{timestamp}.txt",
+    "unmappedconfig_subrules": "unmappedconfig_subrules_{timestamp}.txt",
 }
 
 _TIMESTAMP_FORMAT = "%Y%m%d_%H%M"
+
+
+def print_error(code: str, message: str) -> int:
+    """打印稳定错误码 JSON 到 stdout，返回失败退出码 1。"""
+    print(
+        json.dumps(
+            {"status": "error", "code": code, "message": message},
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return 1
 
 
 def download_filename(kind: str, timestamp: str | None = None) -> str:
