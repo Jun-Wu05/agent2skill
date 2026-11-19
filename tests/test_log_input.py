@@ -18,21 +18,8 @@ for path in (str(ROOT), str(ROOT / "skills" / "parser-skills")):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-from openpyxl import Workbook  # noqa: E402
-
 from _shared import log_input  # noqa: E402
-
-
-def _make_xlsx(path, rows, sheet_name="数据表", extra_sheets=()):
-    """合成 xlsx：rows[0] 为列头行，其后为数据行；None 表示空单元格。"""
-    workbook = Workbook()
-    sheet = workbook.active
-    sheet.title = sheet_name
-    for row in rows:
-        sheet.append(list(row))
-    for name in extra_sheets:
-        workbook.create_sheet(name)
-    workbook.save(path)
+from excel_helpers import make_xlsx as _make_xlsx  # noqa: E402
 
 
 class LoadLogTableTest(unittest.TestCase):
