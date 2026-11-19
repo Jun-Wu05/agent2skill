@@ -16,9 +16,7 @@ CLI 用法:
 
 from __future__ import annotations
 
-import argparse
 import copy
-import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,8 +26,7 @@ _SKILLS_ROOT = Path(__file__).resolve().parents[2]
 if str(_SKILLS_ROOT) not in sys.path:
     sys.path.insert(0, str(_SKILLS_ROOT))
 
-from _shared import report as skill_report  # noqa: E402
-from _shared.config_io import ConfigIOError, load_entities  # noqa: E402
+from _shared import cli  # noqa: E402
 from _shared.entity_scope import entities_in_scope, resolve_field_scope  # noqa: E402
 from _shared.event_binding import (  # noqa: E402
     EVENT_LEVEL_FIELD,
@@ -312,80 +309,27 @@ def delete_field_guarded(
 
 
 # ---------------------------------------------------------------------------
-# CLI（文件输入/输出契约）
+# CLI（文件输入/输出契约，同形骨架见 _shared/cli.py）
 # ---------------------------------------------------------------------------
 
 
+_SPEC = cli.CliSpec(
+    prog="delete_fields.py",
+    description="从解析规则（mapping entities）中删除字段",
+    arguments=(
+        (
+            ("--fields",),
+            {"required": True, "help": "要删除的字段名，逗号分隔"},
+        ),
+    ),
+    execute=lambda args, data, target_names: delete_field_guarded(
+        data, cli.parse_csv(args.fields), target_names, args.group
+    ),
+)
+
+
 def main(argv: Optional[List[str]] = None) -> int:
-    parser = argparse.ArgumentParser(
-        prog="delete_fields.py",
-        description="从解析规则（mapping entities）中删除字段",
-    )
-    parser.add_argument(
-        "--input", "-i", required=True,
-        help="配置文件路径（Base64 txt / 原生 JSON / TXT，内容为 JSON 数组）",
-    )
-    parser.add_argument(
-        "--fields", required=True,
-        help="要删除的字段名，逗号分隔",
-    )
-    parser.add_argument(
-        "--output", "-o", default=None,
-        help="修改后配置 JSON 输出路径（缺省 <输入名>.modified.json）",
-    )
-    parser.add_argument(
-        "--target", default=None,
-        help="目标子规则名（按 name 精确寻址），逗号分隔；缺省全部 entity",
-    )
-    parser.add_argument(
-        "--group", default="all", choices=["all", "threat", "non-threat"],
-        help="按已标注事件名称分组寻址（threat=威胁组 / non-threat=非威胁组）；"
-             "与 --target 并存时 target 优先",
-    )
-    parser.add_argument(
-        "--no-export", action="store_true",
-        help="不产出 Base64 导出文件（缺省会一并产出）",
-    )
-    args = parser.parse_args(argv)
-
-    try:
-        data = load_entities(args.input)
-    except ConfigIOError as exc:
-        print(
-            json.dumps(
-                {"status": "error", "code": exc.code, "message": exc.message},
-                ensure_ascii=False,
-            )
-        )
-        return 1
-
-    fields = [name.strip() for name in args.fields.split(",") if name.strip()]
-    target_names = None
-    if args.target:
-        target_names = [name.strip() for name in args.target.split(",") if name.strip()]
-
-    result = delete_field_guarded(data, fields, target_names, args.group)
-    if result.get("status") != "success":
-        print(json.dumps(result, ensure_ascii=False, indent=2))
-        return 1
-
-    input_path = Path(args.input)
-    output = (
-        Path(args.output)
-        if args.output
-        else input_path.with_name(input_path.stem + ".modified.json")
-    )
-    written = skill_report.write_result(
-        result["data"], output, make_export=not args.no_export
-    )
-    payload = {
-        "status": "success",
-        "message": result["message"],
-        "output": str(written["json_path"]),
-        "export": str(written["export_path"]) if written["export_path"] else None,
-    }
-    print(json.dumps(payload, ensure_ascii=False, indent=2))
-    return 0
+    return cli.run_cli(_SPEC, argv)
 
 
 if __name__ == "__main__":

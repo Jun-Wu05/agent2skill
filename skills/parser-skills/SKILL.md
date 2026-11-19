@@ -3,7 +3,7 @@ name: parser-skills
 description: 解析规则技能集 - 日志解析规则（Base64 配置/JSON/TXT）与日志数据的统一处理入口，涵盖字段调整（添加/删除/合并/base64 解码/正则提取字段）、标准字段映射、日志类型提取、枚举提取与填充、威胁类型映射。当用户说"添加字段、新增字段、删除字段、移除字段、合并字段、base64 解码、解码字段、正则提取、从某字段提取X、字段映射、映射到标准字段、日志类型、把X当作日志类型、提取枚举值、枚举填充、威胁类型、导出Base64配置"等解析规则操作时使用。当前已实现【添加字段】【删除字段】【合并字段】【base64 解码】【正则提取】子命令，其余功能按计划交付中。
 license: MIT
 metadata:
-  version: "0.6.0"
+  version: "0.7.0"
   status: 字段调整-添加/删除/合并/base64 解码/正则提取字段已实现；其余子模块交付中
 ---
 
@@ -32,7 +32,7 @@ metadata:
 - **输入**：配置族文件（Base64 txt / 原生 JSON / TXT，内容为 mapping entities 的 JSON 数组，自动识别解码）或日志数据文件（Excel，须含「原始日志」列）
 - **输出**：每次修改后立即产出——①修改后配置 JSON（默认 `<输入名>.modified.json`，子模块间文件衔接的产物）②平台可导入的 Base64 文件（命名如 `fieldadjusted_config_YYYYMMDD_HHMM.txt`，与输出 JSON 同目录）③stdout JSON 摘要报告（`status` / `message` / `output` / `export`）
 - **不原地覆盖输入文件**；错误码稳定（`config_required` / `invalid_config` / `field_conflict` / `invalid_event_name` / `event_level_conflict` / `reserved_field_rejected` / `rule_name_not_found` / `event_annotation_required` / `field_reference_conflict` / `field_not_found` / `invalid_pattern` / `pattern_mismatch` / `invalid_input` 等），失败退出码 1
-- **共享底座 `_shared/`**：config_io.py（配置族解码/编码）、report.py（统一输出与导出命名）、event_binding.py（事件名称 21 分类绑定表）、entity_scope.py（target/group 寻址解析）、field_policy.py（系统保留字段）——子模块脚本共用，禁止复制
+- **共享底座 `_shared/`**：config_io.py（配置族解码/编码）、report.py（统一输出与导出命名）、event_binding.py（事件名称 21 分类绑定表）、entity_scope.py（target/group 寻址解析）、field_policy.py（系统保留字段）、cli.py（子命令 CLI 骨架：公共参数、加载报告、target 解析与空名单拒绝、落盘 payload；各子命令以 CliSpec 声明差异）——子模块脚本共用，禁止复制
 - 脚本路径相对本技能基目录书写，不依赖会话 cwd
 
 ## 当前可用功能

@@ -260,12 +260,14 @@ class TargetScopeGuardTest(unittest.TestCase):
         self.assertEqual(len(result["data"][1]["normalize"]), 1)
 
     def test_scope_check_precedes_event_field_guards(self):
-        # 寻址校验放最前：target 未名先于事件字段拦截报错
+        # 寻址校验先于事件字段拦截报错（#12 裁决；空校验层不涉足，
+        # 见 ValidateArgsGuardTest）
         result = add_fields.add_field_guarded(
             self.data, "事件级别", "提醒", target_names=["不存在的规则"]
         )
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["code"], "rule_name_not_found")
+
 
     def test_event_name_path_also_validates_targets(self):
         result = add_fields.add_field_guarded(
@@ -273,6 +275,66 @@ class TargetScopeGuardTest(unittest.TestCase):
         )
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["code"], "rule_name_not_found")
+
+
+class ValidateArgsGuardTest(unittest.TestCase):
+    """空校验层（#13 欠账 2：对齐其余四子命令的 _validate_*_args 结构）。
+
+    三个边缘组合的裁决见 #13 票面：空数据 / 空字段名先于寻址解析与
+    事件字段守卫报 invalid_input。
+    """
+
+    def setUp(self):
+        self.data = [make_entity("rule_a", normalize=[norm_entry("src_ip", ["1"])])]
+
+    def test_empty_data_reports_invalid_input(self):
+        result = add_fields.add_field_guarded([], "主机ip", "1.1.1.1")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+        self.assertIn("输入数据为空", result["message"])
+
+    def test_empty_field_name_reports_invalid_input(self):
+        result = add_fields.add_field_guarded(self.data, "", "x")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+        self.assertIn("字段名不能为空", result["message"])
+
+    def test_empty_data_precedes_scope_resolution(self):
+        result = add_fields.add_field_guarded(
+            [], "主机ip", "1.1.1.1", target_names=["不存在的规则"]
+        )
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+        self.assertIn("输入数据为空", result["message"])
+
+    def test_empty_field_name_precedes_scope_resolution(self):
+        result = add_fields.add_field_guarded(
+            self.data, "", "x", target_names=["不存在的规则"]
+        )
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+        self.assertIn("字段名不能为空", result["message"])
+
+    def test_empty_data_precedes_event_name_guard(self):
+        result = add_fields.add_field_guarded([], "事件名称", "不存在的分类")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+        self.assertIn("输入数据为空", result["message"])
+
+    def test_empty_data_precedes_event_level_direct_add_guard(self):
+        # 「空数据+直接添加事件级别」原报 event_level_direct_add_rejected，
+        # 空校验层置最前后归位 invalid_input（#13 票面补记）
+        result = add_fields.add_field_guarded([], "事件级别", "提醒")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+        self.assertIn("输入数据为空", result["message"])
+
+    def test_empty_data_precedes_reference_event_name_guard(self):
+        # 「空数据+引用型事件名称」原报 invalid_event_name，同上归位
+        result = add_fields.add_field_guarded([], "事件名称", "%{src_ip}")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["code"], "invalid_input")
+        self.assertIn("输入数据为空", result["message"])
 
 
 class CliEndToEndTest(unittest.TestCase):
@@ -387,6 +449,20 @@ class CliEndToEndTest(unittest.TestCase):
         self.assertEqual(updated[0]["normalize"][-1]["index"], "主机ip")
         # 名单外 entity 原样透传
         self.assertEqual(updated[1]["normalize"][0]["index"], "dst_ip")
+
+    def test_e2e_empty_target_list_rejected(self):
+        """--target 全为分隔符/空白 → 空名单整单拒绝（#13 欠账 1），无产物。"""
+        output = self._tmp / "o.json"
+        code, stdout = self._run(
+            "--input", str(self.FIXTURE), "--field", "主机ip", "--value", "1.1.1.1",
+            "--target", " , ,",
+            "--output", str(output),
+        )
+        self.assertEqual(code, 1)
+        report = json.loads(stdout)
+        self.assertEqual(report["code"], "invalid_input")
+        self.assertIn("空名单", report["message"])
+        self.assertFalse(output.exists())
 
 
 if __name__ == "__main__":
