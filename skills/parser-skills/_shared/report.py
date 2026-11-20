@@ -21,6 +21,8 @@ DOWNLOAD_NAME_TEMPLATES: dict[str, str] = {
     "mappedconfig_subrules": "mappedconfig_subrules_{timestamp}.txt",
     "mappedconfig_mainrules": "mappedconfig_mainrules_{timestamp}.txt",
     "fieldmapped_config": "fieldmapped_config_{timestamp}.txt",
+    "enummapping_config": "enummapping_config_{timestamp}.txt",
+    "enumvalues_table": "enumvalues_{timestamp}.xlsx",
 }
 
 _TIMESTAMP_FORMAT = "%Y%m%d_%H%M"

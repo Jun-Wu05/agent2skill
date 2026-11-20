@@ -15,3 +15,14 @@ def make_xlsx(path, rows, sheet_name="数据表", extra_sheets=()):
     for name in extra_sheets:
         workbook.create_sheet(name)
     workbook.save(path)
+
+
+def make_multi_sheet_xlsx(path, sheets):
+    """合成多 Sheet xlsx：sheets 为 [(Sheet 名, rows)]，rows[0] 为列头行。"""
+    workbook = Workbook()
+    workbook.remove(workbook.active)
+    for name, rows in sheets:
+        sheet = workbook.create_sheet(name)
+        for row in rows:
+            sheet.append(list(row))
+    workbook.save(path)
