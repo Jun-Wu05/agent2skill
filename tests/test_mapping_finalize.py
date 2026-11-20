@@ -75,7 +75,7 @@ def _classified():
     }
 
 
-B2_SUBRULES = [
+WHITEBOARD_SUBRULES = [
     _subrule(
         "登录_json_子规则",
         [
@@ -96,7 +96,7 @@ B2_SUBRULES = [
     ),
 ]
 
-B2_MAPPINGS = {
+WHITEBOARD_MAPPINGS = {
     "mappings": [
         {"field": "dst_ip", "standard": "目的地址"},
         {"field": "src_address", "standard": "源地址"},
@@ -129,13 +129,13 @@ class ExportNameTemplateTest(unittest.TestCase):
         )
 
 
-class B2EndToEndTest(unittest.TestCase):
+class WhiteboardPathEndToEndTest(unittest.TestCase):
     def setUp(self):
         self._tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self._tmp, ignore_errors=True)
         self.subrules = self._tmp / "whiteboard.subrules.json"
         self.subrules.write_text(
-            json.dumps(B2_SUBRULES, ensure_ascii=False), encoding="utf-8"
+            json.dumps(WHITEBOARD_SUBRULES, ensure_ascii=False), encoding="utf-8"
         )
         self.classified = self._tmp / "whiteboard.classified.json"
         self.classified.write_text(
@@ -143,7 +143,7 @@ class B2EndToEndTest(unittest.TestCase):
         )
         self.mappings = self._tmp / "mappings.json"
         self.mappings.write_text(
-            json.dumps(B2_MAPPINGS, ensure_ascii=False), encoding="utf-8"
+            json.dumps(WHITEBOARD_MAPPINGS, ensure_ascii=False), encoding="utf-8"
         )
 
     def _run(self, extra=None):
@@ -256,7 +256,7 @@ class B2EndToEndTest(unittest.TestCase):
         self.assertFalse(glob.glob(str(self._tmp / "mappedconfig_*.txt")))
 
 
-class A6EndToEndTest(unittest.TestCase):
+class ConfigPathEndToEndTest(unittest.TestCase):
     def setUp(self):
         self._tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self._tmp, ignore_errors=True)

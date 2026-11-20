@@ -1,13 +1,13 @@
 """标准字段目录：领域资产的确定性加载、解析与查找。
 
-单一事实源是仓库根 ``assets/`` 三件（标准字段.txt / field_synonyms.json /
+单一事实源是技能目录 ``assets/`` 三件（标准字段.txt / field_synonyms.json /
 tag_rules.json），只读加载。标准名解析（normalize/compact/中文系统名/中文别
 名四路索引）、映射目标黑名单、枚举字段短路都必须经过本模块，禁止在别处复制
 索引或校验逻辑。
 
-资产定位：从本文件位置向上回溯到仓库根的 ``assets/``（技能以 Junction 部署
-时 ``resolve()`` 归位到真实仓库路径，同样可达）；也可用
-``load_catalog(assets_dir=...)`` 显式指定。
+资产定位：随技能目录自包含——本模块上一级的 ``<parser-skills>/assets/``
+（技能目录被单独拷贝分发时同样可达；``resolve()`` 兼容 Junction / 符号链接
+部署）；也可用 ``load_catalog(assets_dir=...)`` 显式指定。
 """
 
 from __future__ import annotations
@@ -45,14 +45,14 @@ MAPPING_EXCLUDED_INDICES = frozenset(
     {"original_log", "日志类型", "事件名称", "事件级别"}
 )
 
-_ASSETS_DIR = Path(__file__).resolve().parents[3] / "assets"
+_ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 _STANDARD_FIELDS_NAME = "标准字段.txt"
 _SYNONYMS_NAME = "field_synonyms.json"
 _TAG_RULES_NAME = "tag_rules.json"
 
 
 def default_assets_dir() -> Path:
-    """返回领域资产目录（仓库根 ``assets/``）。"""
+    """返回领域资产目录（技能目录 ``assets/``）。"""
     return _ASSETS_DIR
 
 

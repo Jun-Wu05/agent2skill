@@ -4,7 +4,7 @@
 compact_field_name / StandardField / StandardFieldCatalog（from_resources、
 lookup、name_index）/ load_catalog / default_assets_dir /
 MAPPING_EXCLUDED_STANDARD_FIELDS / 枚举字段短路（enum_auto_mapping_policies、
-resolve_enum_field）。断言字面量取自仓库根 assets/ 真实资产与合成夹具。
+resolve_enum_field）。断言字面量取自技能 assets/ 真实资产与合成夹具。
 """
 
 from __future__ import annotations
