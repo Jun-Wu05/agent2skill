@@ -1,8 +1,8 @@
 """candidate_retrieval 单元测试：词法打分候选检索（Top-K 附元数据）。
 
 接缝：_shared.candidate_retrieval 的公开 API——Candidate /
-CandidateRetriever（retrieve）/ retrieve_candidates。召回断言用仓库根
-assets/ 真实资产（625 条目录），边界断言用合成目录（StandardFieldCatalog
+CandidateRetriever（retrieve）/ retrieve_candidates。召回断言用技能 assets/
+真实资产（625 条目录），边界断言用合成目录（StandardFieldCatalog
 公开构造）。
 """
 
