@@ -45,6 +45,11 @@ MAPPING_EXCLUDED_INDICES = frozenset(
     {"original_log", "日志类型", "事件名称", "事件级别"}
 )
 
+#: 枚举值映射目标黑名单：这些 normalize[].index 的 mappings 由各自专属链路
+#: 持有（威胁类型走威胁类型链路，其余同上），枚举填充/取消映射整单拒绝。
+#: 由 MAPPING_EXCLUDED_INDICES 派生，禁止在别处复制成员清单。
+ENUM_MAPPING_EXCLUDED_INDICES = frozenset(MAPPING_EXCLUDED_INDICES | {"威胁类型"})
+
 _ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 _STANDARD_FIELDS_NAME = "标准字段.txt"
 _SYNONYMS_NAME = "field_synonyms.json"
