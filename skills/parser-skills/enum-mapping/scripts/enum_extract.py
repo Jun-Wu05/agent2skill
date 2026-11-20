@@ -124,14 +124,18 @@ def build_enum_values(
 
 
 def write_mapping_template(report: Dict[str, Any], path: Path) -> Path:
-    """把枚举值报告写成映射表模板 xlsx（orgValue 与 EQUAL 预填）。"""
+    """把枚举值报告写成映射表模板 xlsx（orgValue 与 EQUAL 预填）。
+
+    orgValue 取**全量**唯一值（value_counts 的首现序键），不受
+    ``--max-values`` 截断影响——归类环节的输出集合必须与提取集合一致。
+    """
     from openpyxl import Workbook
 
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = report["field"]
     sheet.append(["mappingType", "orgValue", "mappingValue"])
-    for value in report["values"]:
+    for value in report["value_counts"]:
         sheet.append(["EQUAL", value, None])
     path.parent.mkdir(parents=True, exist_ok=True)
     workbook.save(path)
@@ -230,6 +234,11 @@ def main(argv: Optional[List[str]] = None) -> int:
             + (
                 f"；值列表已截断至 {report['max_values']}"
                 if report["truncated"]
+                else ""
+            )
+            + (
+                "；--header-end-marker 已忽略（JSON 提取自带日志头回退）"
+                if args.format == "json" and args.header_end_marker
                 else ""
             )
         ),

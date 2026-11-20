@@ -388,6 +388,50 @@ class EnumFillCliTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(payload["code"], "invalid_input")
 
+    def test_indirect_blacklist_via_field_annotation(self):
+        # 条目 index 非黑名单、field 标注是链路持有的标准名 → 同样拒绝
+        config = self._config(
+            [make_entity(entries=[make_entry("raw_threat", field="威胁类型")])]
+        )
+        pairs = self._mappings_json(
+            {"mappings": [{"field": "raw_threat", "pairs": [{"orgValue": "a", "mappingValue": "甲"}]}]}
+        )
+        code, payload = self._run("--input", str(config), "--mappings", str(pairs))
+        self.assertEqual(code, 1)
+        self.assertEqual(payload["code"], "reserved_field_rejected")
+
+    def test_unbind_only_message(self):
+        # 映射已全部存在但发生解绑 → 消息明确「无映射变更」而非「无变更」
+        config = self._config(
+            [
+                make_entity(
+                    entries=[
+                        make_entry(
+                            "event_type",
+                            mappings=[
+                                {
+                                    "mappingType": "EQUAL",
+                                    "orgValue": "login",
+                                    "mappingValue": "登录",
+                                }
+                            ],
+                        )
+                    ],
+                    filters=[
+                        {"name": "addFields", "id": "", "fields": {"event_type": "固定值"}}
+                    ],
+                )
+            ]
+        )
+        pairs = self._mappings_json(
+            {"mappings": [{"field": "event_type", "pairs": [{"orgValue": "login", "mappingValue": "登录"}]}]}
+        )
+        code, payload = self._run("--input", str(config), "--mappings", str(pairs))
+        self.assertEqual(code, 0)
+        self.assertIn("无映射变更", payload["message"])
+        self.assertIn("解绑固定值绑定 1 处", payload["message"])
+        self.assertEqual(payload["unbound"], 1)
+
     def test_config_load_error(self):
         pairs = self._mappings_json(
             {"mappings": [{"field": "x", "pairs": [{"orgValue": "a", "mappingValue": "甲"}]}]}

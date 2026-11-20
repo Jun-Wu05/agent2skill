@@ -13,6 +13,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterator, List, Tuple
 
+from .standard_catalog import (
+    ENUM_MAPPING_EXCLUDED_DISPLAY,
+    ENUM_MAPPING_EXCLUDED_INDICES,
+)
+
 
 def iter_normalize_entries(obj: Any) -> Iterator[Tuple[dict, dict]]:
     """递归遍历配置，产出 (持有 normalize 的节点, normalize 条目)。"""
@@ -75,3 +80,41 @@ def field_vocab(config: Any) -> List[str]:
     for _owner, entry in iter_normalize_entries(config):
         _add(entry.get("index"), entry.get("field"))
     return vocab
+
+
+# ---------------------------------------------------------------------------
+# 枚举值映射目标黑名单守卫（填充/取消共用，禁止在脚本内复制）
+# ---------------------------------------------------------------------------
+
+def direct_blacklist_fields(target_fields: List[str]) -> List[str]:
+    """目标名直接命中黑名单的名单（保序）。"""
+    return [field for field in target_fields if field in ENUM_MAPPING_EXCLUDED_INDICES]
+
+
+def indirect_blacklist_fields(
+    matches: Dict[str, List[Tuple[dict, dict]]], target_fields: List[str]
+) -> List[str]:
+    """经 index **或 field 标注**命中黑名单持有条目的目标名单（保序）。
+
+    条目只要有一路落在黑名单上（index 是链路持有索引，或 field 标注是
+    链路持有的标准名），该目标即整单拒绝。
+    """
+    result: List[str] = []
+    for field in target_fields:
+        hit = any(
+            entry.get("index") in ENUM_MAPPING_EXCLUDED_INDICES
+            or entry.get("field") in ENUM_MAPPING_EXCLUDED_INDICES
+            for _owner, entry in matches.get(field, ())
+        )
+        if hit:
+            result.append(field)
+    return result
+
+
+def blacklist_reject_message(verb: str, fields: List[str]) -> str:
+    """构造黑名单整单拒绝消息（成员展示串单源于 standard_catalog）。"""
+    return (
+        f"目标字段由专属链路持有，拒绝{verb}: "
+        + "、".join(fields)
+        + f"（黑名单: {ENUM_MAPPING_EXCLUDED_DISPLAY}）"
+    )

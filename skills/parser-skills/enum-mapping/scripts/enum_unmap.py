@@ -14,8 +14,8 @@ CLI 用法:
 
 守卫链（任一命中整单拒绝，一行不写）:
 - ``--fields`` 解析后为空名单 → ``invalid_input``；
-- 目标黑名单（original_log / 日志类型 / 事件名称 / 事件级别 / 威胁类型，
-  目标名直接命中或经 field 名命中黑名单条目）→
+- 目标黑名单（original_log / 日志类型 / 事件名称 / 事件级别 / 威胁类型；
+  目标名直接命中，或命中条目的 index / field 标注落在黑名单上）→
   ``reserved_field_rejected``；
 - 目标在配置中无同名 index/field 条目 → ``field_not_found``
   （附「原始名(标准名)」可用字段词汇表）；
@@ -43,8 +43,13 @@ if str(_SKILLS_ROOT) not in sys.path:
 
 from _shared import report as skill_report
 from _shared.config_io import ConfigIOError, load_entities
-from _shared.enum_targets import field_vocab, resolve_targets
-from _shared.standard_catalog import ENUM_MAPPING_EXCLUDED_INDICES
+from _shared.enum_targets import (
+    blacklist_reject_message,
+    direct_blacklist_fields,
+    field_vocab,
+    indirect_blacklist_fields,
+    resolve_targets,
+)
 
 _VOCAB_HINT_LIMIT = 20
 
@@ -97,15 +102,11 @@ def main(argv: Optional[List[str]] = None) -> int:
             "--fields 解析后为空名单：请提供有效目标字段，多个字段用逗号分隔",
         )
 
-    direct_blacklist = [
-        field for field in target_fields if field in ENUM_MAPPING_EXCLUDED_INDICES
-    ]
+    direct_blacklist = direct_blacklist_fields(target_fields)
     if direct_blacklist:
         return _print_error(
             "reserved_field_rejected",
-            "目标字段由专属链路持有，拒绝取消映射: "
-            + "、".join(direct_blacklist)
-            + "（黑名单: original_log / 日志类型 / 事件名称 / 事件级别 / 威胁类型）",
+            blacklist_reject_message("取消映射", direct_blacklist),
         )
 
     try:
@@ -124,20 +125,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             + _vocab_hint(updated),
         )
 
-    indirect_blacklist = [
-        field
-        for field in target_fields
-        if any(
-            entry.get("index") in ENUM_MAPPING_EXCLUDED_INDICES
-            for _owner, entry in matches[field]
-        )
-    ]
+    # 经 index 或 field 标注命中黑名单持有条目 → 整单拒绝
+    indirect_blacklist = indirect_blacklist_fields(matches, target_fields)
     if indirect_blacklist:
         return _print_error(
             "reserved_field_rejected",
-            "目标字段命中由专属链路持有的条目，拒绝取消映射: "
-            + "、".join(indirect_blacklist)
-            + "（黑名单: original_log / 日志类型 / 事件名称 / 事件级别 / 威胁类型）",
+            blacklist_reject_message("取消映射", indirect_blacklist),
         )
 
     # 标准字段名歧义：只经 field 名命中且对应 ≥2 个不同原始字段
@@ -145,18 +138,20 @@ def main(argv: Optional[List[str]] = None) -> int:
         field_only = [
             entry
             for _owner, entry in matches[field]
-            if entry.get("index") != field
+            if str(entry.get("index") or "").strip() and entry.get("index") != field
         ]
-        distinct_indexes = {str(entry.get("index") or "") for entry in field_only}
+        distinct_indexes = {str(entry.get("index")) for entry in field_only}
         if len(distinct_indexes) >= 2:
-            candidates = "、".join(
-                f"{entry.get('index')}({entry.get('field')})"
-                for entry in field_only
-            )
+            candidates: List[str] = []
+            for entry in field_only:
+                display = f"{entry.get('index')}({entry.get('field')})"
+                if display not in candidates:
+                    candidates.append(display)
             return _print_error(
                 "field_name_ambiguous",
-                f"字段「{field}」是标准字段名，对应多个原始字段: {candidates}。"
-                f"请改用其中的原始字段名",
+                f"字段「{field}」是标准字段名，对应多个原始字段: "
+                + "、".join(candidates)
+                + "。请改用其中的原始字段名",
             )
 
     # 禁止静默成功：目标命中的全部条目都没有 mappings → 拒绝

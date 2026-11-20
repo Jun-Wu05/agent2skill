@@ -23,8 +23,8 @@ CLI 用法:
 守卫链（任一命中整单拒绝，一行不写）:
 - ``--mappings`` 与 ``--excel`` 必须二选一；
 - 契约不符（结构错 / 字段缺失 / 字段无有效映射对）→ ``invalid_input``；
-- 目标黑名单（original_log / 日志类型 / 事件名称 / 事件级别 / 威胁类型，
-  含目标名直接命中或经 field 名命中黑名单条目）→
+- 目标黑名单（original_log / 日志类型 / 事件名称 / 事件级别 / 威胁类型；
+  目标名直接命中，或命中条目的 index / field 标注落在黑名单上）→
   ``reserved_field_rejected``；
 - 任一目标字段在配置中无同名 index/field 条目 →
   ``enum_target_field_mismatch``（附可用字段提示）。
@@ -59,8 +59,13 @@ from _shared.enum_table import (
     load_enum_table,
     normalize_pairs,
 )
-from _shared.enum_targets import available_field_names, resolve_targets
-from _shared.standard_catalog import ENUM_MAPPING_EXCLUDED_INDICES
+from _shared.enum_targets import (
+    available_field_names,
+    blacklist_reject_message,
+    direct_blacklist_fields,
+    indirect_blacklist_fields,
+    resolve_targets,
+)
 
 _AVAILABLE_FIELD_HINT_LIMIT = 20
 
@@ -278,15 +283,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     for field in target_fields:
         fields[field], pair_duplicates[field] = dedup_pairs_first_wins(fields[field])
 
-    direct_blacklist = [
-        field for field in target_fields if field in ENUM_MAPPING_EXCLUDED_INDICES
-    ]
+    direct_blacklist = direct_blacklist_fields(target_fields)
     if direct_blacklist:
         return _print_error(
             "reserved_field_rejected",
-            "目标字段由专属链路持有，拒绝写入枚举映射: "
-            + "、".join(direct_blacklist)
-            + "（黑名单: original_log / 日志类型 / 事件名称 / 事件级别 / 威胁类型）",
+            blacklist_reject_message("写入枚举映射", direct_blacklist),
         )
 
     try:
@@ -310,21 +311,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             f"可用字段: {hint}",
         )
 
-    # 经 field 名命中黑名单条目 → 整单拒绝
-    indirect_blacklist = [
-        field
-        for field in target_fields
-        if any(
-            entry.get("index") in ENUM_MAPPING_EXCLUDED_INDICES
-            for _owner, entry in matches[field]
-        )
-    ]
+    # 经 index 或 field 标注命中黑名单持有条目 → 整单拒绝
+    indirect_blacklist = indirect_blacklist_fields(matches, target_fields)
     if indirect_blacklist:
         return _print_error(
             "reserved_field_rejected",
-            "目标字段命中由专属链路持有的条目，拒绝写入枚举映射: "
-            + "、".join(indirect_blacklist)
-            + "（黑名单: original_log / 日志类型 / 事件名称 / 事件级别 / 威胁类型）",
+            blacklist_reject_message("写入枚举映射", indirect_blacklist),
         )
 
     unbound = unbind_fixed_bindings(updated, target_fields)
@@ -349,14 +341,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
 
     changes = total_added + total_updated
-    message = (
-        "枚举映射已全部存在，无变更"
-        if changes == 0
-        else (
+    if changes == 0 and unbound == 0:
+        message = "枚举映射已全部存在，无变更"
+    elif changes == 0:
+        message = "枚举映射已全部存在，无映射变更"
+    else:
+        message = (
             f"写入映射对 {changes} 条（新增 {total_added}、更新 {total_updated}），"
             f"命中 {sum(report['targets'] for report in field_reports)} 个条目"
         )
-    )
     if unbound:
         message += f"；解绑固定值绑定 {unbound} 处"
 

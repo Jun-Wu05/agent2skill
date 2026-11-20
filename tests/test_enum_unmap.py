@@ -202,6 +202,39 @@ class EnumUnmapCliTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(payload["code"], "invalid_input")
 
+    def test_indirect_blacklist_via_field_annotation(self):
+        # 条目 index 非黑名单、field 标注是链路持有的标准名 → 同样拒绝
+        config = self._config(
+            [
+                make_entity(
+                    entries=[make_entry("raw_threat", field="威胁类型", mappings=[MAPPING])]
+                )
+            ]
+        )
+        code, payload = self._run("--input", str(config), "--fields", "raw_threat")
+        self.assertEqual(code, 1)
+        self.assertEqual(payload["code"], "reserved_field_rejected")
+
+    def test_ambiguous_candidates_skip_missing_index(self):
+        # 无 index 的条目不进歧义候选（不出现 None(...)），也不计入判歧
+        config = self._config(
+            [
+                make_entity(
+                    entries=[
+                        make_entry("etype1", field="事件状态", mappings=[MAPPING]),
+                        make_entry(None, field="事件状态", mappings=[MAPPING]),
+                        make_entry("etype2", field="事件状态", mappings=[MAPPING]),
+                    ]
+                )
+            ]
+        )
+        code, payload = self._run("--input", str(config), "--fields", "事件状态")
+        self.assertEqual(code, 1)
+        self.assertEqual(payload["code"], "field_name_ambiguous")
+        self.assertIn("etype1", payload["message"])
+        self.assertIn("etype2", payload["message"])
+        self.assertNotIn("None", payload["message"])
+
     def test_config_load_error(self):
         code, payload = self._run(
             "--input", str(self._tmp / "nope.json"), "--fields", "x"

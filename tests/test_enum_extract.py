@@ -184,6 +184,31 @@ class EnumExtractCliTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(payload["code"], "invalid_input")
 
+    def test_template_includes_all_unique_values_beyond_max(self):
+        # 模板 orgValue 用全量唯一值，不受 --max-values 截断影响
+        xlsx = self._xlsx(["type=a", "type=b", "type=c"])
+        code, payload = self._run(
+            "--input", str(xlsx), "--field", "type", "--format", "kv",
+            "--max-values", "1", "--template",
+        )
+        self.assertEqual(code, 0)
+        table = load_enum_table(Path(payload["template"]))
+        self.assertEqual(
+            [pair["orgValue"] for pair in table["fields"][0]["pairs"]],
+            ["a", "b", "c"],
+        )
+
+    def test_json_ignores_header_marker_with_note(self):
+        xlsx = self._xlsx(['{"event_type": "login"}'])
+        code, payload = self._run(
+            "--input", str(xlsx), "--field", "event_type", "--format", "json",
+            "--header-end-marker", "app[1]: ",
+        )
+        self.assertEqual(code, 0)
+        self.assertIn("已忽略", payload["message"])
+        report = self._read(payload["output"])
+        self.assertEqual(report["values"], ["login"])
+
     def test_missing_input_file(self):
         code, payload = self._run(
             "--input", str(self._tmp / "nope.xlsx"), "--field", "x", "--format", "kv"
