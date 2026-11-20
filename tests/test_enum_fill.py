@@ -323,27 +323,22 @@ class EnumFillCliTest(unittest.TestCase):
         outputs = list(self._tmp.glob("*.enumfilled.json"))
         self.assertEqual(outputs, [])
 
-    def test_blacklist_target_rejected(self):
+    def test_chain_held_field_fill_allowed(self):
+        # 用户 2026-11-20 真实验收裁决：枚举填充不做目标黑名单——
+        # 威胁类型等链路持有字段同样可经枚举填充手工维护值映射
         config = self._config(
-            [make_entity(entries=[make_entry("事件名称", field="event_name")])]
-        )
-        pairs = self._mappings_json(
-            {"mappings": [{"field": "event_name", "pairs": [{"orgValue": "a", "mappingValue": "甲"}]}]}
-        )
-        code, payload = self._run("--input", str(config), "--mappings", str(pairs))
-        self.assertEqual(code, 1)
-        self.assertEqual(payload["code"], "reserved_field_rejected")
-
-    def test_blacklisted_index_name_rejected(self):
-        config = self._config(
-            [make_entity(entries=[make_entry("威胁类型")])]
+            [make_entity(entries=[make_entry("威胁类型", field=None)])]
         )
         pairs = self._mappings_json(
             {"mappings": [{"field": "威胁类型", "pairs": [{"orgValue": "a", "mappingValue": "甲"}]}]}
         )
         code, payload = self._run("--input", str(config), "--mappings", str(pairs))
-        self.assertEqual(code, 1)
-        self.assertEqual(payload["code"], "reserved_field_rejected")
+        self.assertEqual(code, 0)
+        result = self._read_output(payload)
+        self.assertEqual(
+            result[0]["normalize"][0]["mappings"],
+            [{"mappingType": "EQUAL", "orgValue": "a", "mappingValue": "甲"}],
+        )
 
     def test_inputs_mutually_exclusive(self):
         config = self._config([make_entity(entries=[make_entry("event_type")])])
@@ -387,18 +382,6 @@ class EnumFillCliTest(unittest.TestCase):
         code, payload = self._run("--input", str(config), "--excel", str(excel))
         self.assertEqual(code, 1)
         self.assertEqual(payload["code"], "invalid_input")
-
-    def test_indirect_blacklist_via_field_annotation(self):
-        # 条目 index 非黑名单、field 标注是链路持有的标准名 → 同样拒绝
-        config = self._config(
-            [make_entity(entries=[make_entry("raw_threat", field="威胁类型")])]
-        )
-        pairs = self._mappings_json(
-            {"mappings": [{"field": "raw_threat", "pairs": [{"orgValue": "a", "mappingValue": "甲"}]}]}
-        )
-        code, payload = self._run("--input", str(config), "--mappings", str(pairs))
-        self.assertEqual(code, 1)
-        self.assertEqual(payload["code"], "reserved_field_rejected")
 
     def test_unbind_only_message(self):
         # 映射已全部存在但发生解绑 → 消息明确「无映射变更」而非「无变更」

@@ -88,14 +88,15 @@ python <parser-skills>/enum-mapping/scripts/enum_unmap.py \
 
 - **目标寻址**：填充/取消都按 normalize 条目 index 或 field 同名命中；同一原始字段跨多条目一并生效
 - **合并更新**：填充对同 orgValue 原地更新、新值追加、未提及的既有映射保留（幂等重跑友好）；要删除映射用取消映射（整字段置空），不支持删单对
-- **守卫整单拒绝**（一行不写）：目标黑名单（original_log / 日志类型 / 事件名称 / 事件级别 / 威胁类型，由各自专属链路持有）→ `reserved_field_rejected`；任一目标字段在配置中不存在 → `enum_target_field_mismatch`（附可用字段提示）；取消时标准名歧义（一个标准字段名对应多个原始字段）→ `field_name_ambiguous`（改用原始字段名）；目标没有可取消的映射 → `mapping_not_found`（禁止静默成功）
+- **守卫整单拒绝**（一行不写）：任一目标字段在配置中不存在 → `enum_target_field_mismatch`（附可用字段提示）；取消时标准名歧义（一个标准字段名对应多个原始字段）→ `field_name_ambiguous`（改用原始字段名）；目标没有可取消的映射 → `mapping_not_found`（禁止静默成功）
+- **不做目标黑名单**（用户裁决）：任何字段都可经枚举填充/取消维护值映射，包括威胁类型等链路持有字段——各链路与手工填充共用 orgValue 合并语义，可共存
 - **填充即解绑**：addFields 过滤器里目标字段的固定值绑定自动删除（`%{}` 引用绑定保留）——固定值与值映射不能并存
 - 枚举**字段**归属判定（某原始字段映射到哪个标准枚举字段）是 field-mapping 的范围（8 类枚举字段短路）；本子模块只做**值**映射
-- 威胁类型走独立链路（REGULAR 正则映射由威胁类型子模块持有），不在本流程
+- 威胁类型的**自动分类**（内置分类表 + REGULAR 正则映射）走威胁类型子模块；手工值映射表经本流程填充，两者共用 orgValue 合并语义
 - 产物同名直接覆盖；不原地覆盖输入文件
 
 **完整 JSON 契约**（enum_values.json / 映射对 JSON / 映射表 Excel / 两产物 / stdout 摘要的字段说明）见 [references/enum_schema.md](references/enum_schema.md)。
 
 ## 错误码
 
-`config_required`（配置文件缺失）/ `input_required`（数据表或映射表缺失）/ `invalid_config`（配置非数组）/ `invalid_input`（路径互斥、契约不符、空名单）/ `reserved_field_rejected`（目标黑名单）/ `enum_extract_empty`（零命中）/ `enum_target_field_mismatch`（目标字段不存在）/ `field_not_found`（取消目标未找到）/ `field_name_ambiguous`（标准名歧义）/ `mapping_not_found`（无可取消映射），失败退出码 1，stdout JSON 报告。
+`config_required`（配置文件缺失）/ `input_required`（数据表或映射表缺失）/ `invalid_config`（配置非数组）/ `invalid_input`（路径互斥、契约不符、空名单）/ `enum_extract_empty`（零命中）/ `enum_target_field_mismatch`（目标字段不存在）/ `field_not_found`（取消目标未找到）/ `field_name_ambiguous`（标准名歧义）/ `mapping_not_found`（无可取消映射），失败退出码 1，stdout JSON 报告。

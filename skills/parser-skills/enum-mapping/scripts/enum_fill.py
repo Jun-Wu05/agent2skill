@@ -23,11 +23,11 @@ CLI 用法:
 守卫链（任一命中整单拒绝，一行不写）:
 - ``--mappings`` 与 ``--excel`` 必须二选一；
 - 契约不符（结构错 / 字段缺失 / 字段无有效映射对）→ ``invalid_input``；
-- 目标黑名单（original_log / 日志类型 / 事件名称 / 事件级别 / 威胁类型；
-  目标名直接命中，或命中条目的 index / field 标注落在黑名单上）→
-  ``reserved_field_rejected``；
 - 任一目标字段在配置中无同名 index/field 条目 →
   ``enum_target_field_mismatch``（附可用字段提示）。
+- **不做目标黑名单**（用户 2026-11-20 真实验收裁决）：任何字段都可经
+  枚举填充维护值映射，包括威胁类型等链路持有字段——各链路与手工填充
+  走同一套 orgValue 合并语义，可共存。
 
 写回语义:
 - 同 orgValue 原地更新 mappingValue / mappingType，新 orgValue 追加，
@@ -59,13 +59,7 @@ from _shared.enum_table import (
     load_enum_table,
     normalize_pairs,
 )
-from _shared.enum_targets import (
-    available_field_names,
-    blacklist_reject_message,
-    direct_blacklist_fields,
-    indirect_blacklist_fields,
-    resolve_targets,
-)
+from _shared.enum_targets import available_field_names, resolve_targets
 
 _AVAILABLE_FIELD_HINT_LIMIT = 20
 
@@ -283,13 +277,6 @@ def main(argv: Optional[List[str]] = None) -> int:
     for field in target_fields:
         fields[field], pair_duplicates[field] = dedup_pairs_first_wins(fields[field])
 
-    direct_blacklist = direct_blacklist_fields(target_fields)
-    if direct_blacklist:
-        return _print_error(
-            "reserved_field_rejected",
-            blacklist_reject_message("写入枚举映射", direct_blacklist),
-        )
-
     try:
         config = load_entities(args.input)
     except ConfigIOError as exc:
@@ -309,14 +296,6 @@ def main(argv: Optional[List[str]] = None) -> int:
             f"映射对的目标字段（{'、'.join(missing)}）在当前配置中不存在，"
             f"请检查目标字段名与配置中的字段是否一致，或先在解析规则中补充该字段；"
             f"可用字段: {hint}",
-        )
-
-    # 经 index 或 field 标注命中黑名单持有条目 → 整单拒绝
-    indirect_blacklist = indirect_blacklist_fields(matches, target_fields)
-    if indirect_blacklist:
-        return _print_error(
-            "reserved_field_rejected",
-            blacklist_reject_message("写入枚举映射", indirect_blacklist),
         )
 
     unbound = unbind_fixed_bindings(updated, target_fields)

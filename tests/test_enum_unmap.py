@@ -133,23 +133,15 @@ class EnumUnmapCliTest(unittest.TestCase):
         self.assertEqual(payload["code"], "field_not_found")
         self.assertIn("event_type(事件状态)", payload["message"])
 
-    def test_blacklist_rejected_by_name_and_by_entry(self):
+    def test_chain_held_field_unmap_allowed(self):
+        # 用户 2026-11-20 真实验收裁决：取消映射与填充对称，不做目标黑名单
         config = self._config(
-            [
-                make_entity(
-                    entries=[
-                        make_entry("事件名称", field="event_name", mappings=[MAPPING]),
-                        make_entry("威胁类型", mappings=[MAPPING]),
-                    ]
-                )
-            ]
+            [make_entity(entries=[make_entry("威胁类型", mappings=[MAPPING])])]
         )
         code, payload = self._run("--input", str(config), "--fields", "威胁类型")
-        self.assertEqual(code, 1)
-        self.assertEqual(payload["code"], "reserved_field_rejected")
-        code, payload = self._run("--input", str(config), "--fields", "event_name")
-        self.assertEqual(code, 1)
-        self.assertEqual(payload["code"], "reserved_field_rejected")
+        self.assertEqual(code, 0)
+        result = self._read_output(payload)
+        self.assertEqual(result[0]["normalize"][0]["mappings"], [])
 
     def test_standard_name_ambiguous_rejects(self):
         config = self._config(
@@ -201,19 +193,6 @@ class EnumUnmapCliTest(unittest.TestCase):
         code, payload = self._run("--input", str(config), "--fields", " , ")
         self.assertEqual(code, 1)
         self.assertEqual(payload["code"], "invalid_input")
-
-    def test_indirect_blacklist_via_field_annotation(self):
-        # 条目 index 非黑名单、field 标注是链路持有的标准名 → 同样拒绝
-        config = self._config(
-            [
-                make_entity(
-                    entries=[make_entry("raw_threat", field="威胁类型", mappings=[MAPPING])]
-                )
-            ]
-        )
-        code, payload = self._run("--input", str(config), "--fields", "raw_threat")
-        self.assertEqual(code, 1)
-        self.assertEqual(payload["code"], "reserved_field_rejected")
 
     def test_ambiguous_candidates_skip_missing_index(self):
         # 无 index 的条目不进歧义候选（不出现 None(...)），也不计入判歧

@@ -14,15 +14,14 @@ CLI 用法:
 
 守卫链（任一命中整单拒绝，一行不写）:
 - ``--fields`` 解析后为空名单 → ``invalid_input``；
-- 目标黑名单（original_log / 日志类型 / 事件名称 / 事件级别 / 威胁类型；
-  目标名直接命中，或命中条目的 index / field 标注落在黑名单上）→
-  ``reserved_field_rejected``；
 - 目标在配置中无同名 index/field 条目 → ``field_not_found``
   （附「原始名(标准名)」可用字段词汇表）；
 - 标准字段名歧义：目标只经 field 名命中、且对应 ≥2 个不同原始字段
   → ``field_name_ambiguous``（列出候选，请改用原始字段名）；
 - 目标命中的全部条目都没有 mappings → ``mapping_not_found``
   （禁止静默成功）。
+- **不做目标黑名单**（用户 2026-11-20 真实验收裁决）：任何字段都可
+  取消值映射，与填充对称。
 
 清空语义: 目标命中的全部条目（index 同名 + field 同名消歧后）一并置空
 ``mappings = []``；有条目本来就没有 mappings 时如实记入 skipped。
@@ -43,13 +42,7 @@ if str(_SKILLS_ROOT) not in sys.path:
 
 from _shared import report as skill_report
 from _shared.config_io import ConfigIOError, load_entities
-from _shared.enum_targets import (
-    blacklist_reject_message,
-    direct_blacklist_fields,
-    field_vocab,
-    indirect_blacklist_fields,
-    resolve_targets,
-)
+from _shared.enum_targets import field_vocab, resolve_targets
 
 _VOCAB_HINT_LIMIT = 20
 
@@ -102,13 +95,6 @@ def main(argv: Optional[List[str]] = None) -> int:
             "--fields 解析后为空名单：请提供有效目标字段，多个字段用逗号分隔",
         )
 
-    direct_blacklist = direct_blacklist_fields(target_fields)
-    if direct_blacklist:
-        return _print_error(
-            "reserved_field_rejected",
-            blacklist_reject_message("取消映射", direct_blacklist),
-        )
-
     try:
         config = load_entities(args.input)
     except ConfigIOError as exc:
@@ -123,14 +109,6 @@ def main(argv: Optional[List[str]] = None) -> int:
             "field_not_found",
             f"未找到字段（{'、'.join(missing)}）。可用字段（原始名(标准名)）: "
             + _vocab_hint(updated),
-        )
-
-    # 经 index 或 field 标注命中黑名单持有条目 → 整单拒绝
-    indirect_blacklist = indirect_blacklist_fields(matches, target_fields)
-    if indirect_blacklist:
-        return _print_error(
-            "reserved_field_rejected",
-            blacklist_reject_message("取消映射", indirect_blacklist),
         )
 
     # 标准字段名歧义：只经 field 名命中且对应 ≥2 个不同原始字段

@@ -79,4 +79,4 @@
 | `unbound` | 填充时解绑的固定值绑定数 |
 | `template` | 提取的映射表模板路径（仅 `--template` 时出现） |
 
-**错误码**：`config_required` / `input_required` / `invalid_config` / `invalid_input` / `reserved_field_rejected`（目标黑名单：original_log / 日志类型 / 事件名称 / 事件级别 / 威胁类型）/ `enum_extract_empty` / `enum_target_field_mismatch` / `field_not_found` / `field_name_ambiguous` / `mapping_not_found`。守卫命中一律整单拒绝、不产出文件；零变更填充是**成功**（幂等提示，产物照常输出）。
+**错误码**：`config_required` / `input_required` / `invalid_config` / `invalid_input` / `enum_extract_empty` / `enum_target_field_mismatch` / `field_not_found` / `field_name_ambiguous` / `mapping_not_found`。守卫命中一律整单拒绝、不产出文件；零变更填充是**成功**（幂等提示，产物照常输出）。**不做目标黑名单**（用户裁决）：任何字段都可经枚举填充/取消维护值映射，包括威胁类型等链路持有字段。
