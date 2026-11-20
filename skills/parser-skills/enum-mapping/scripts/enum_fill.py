@@ -46,7 +46,7 @@ import copy
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 _SKILLS_ROOT = Path(__file__).resolve().parents[2]
 if str(_SKILLS_ROOT) not in sys.path:
@@ -59,6 +59,7 @@ from _shared.enum_table import (
     load_enum_table,
     normalize_pairs,
 )
+from _shared.enum_targets import available_field_names, resolve_targets
 from _shared.standard_catalog import ENUM_MAPPING_EXCLUDED_INDICES
 
 _AVAILABLE_FIELD_HINT_LIMIT = 20
@@ -69,51 +70,8 @@ def _print_error(code: str, message: str) -> int:
 
 
 # ---------------------------------------------------------------------------
-# 配置遍历与目标解析
+# 写回
 # ---------------------------------------------------------------------------
-
-def _iter_normalize_entries(obj: Any) -> Iterator[Tuple[dict, dict]]:
-    """递归遍历配置，产出 (持有 normalize 的节点, normalize 条目)。"""
-    if isinstance(obj, dict):
-        normalize = obj.get("normalize")
-        if isinstance(normalize, list):
-            for entry in normalize:
-                if isinstance(entry, dict):
-                    yield obj, entry
-        for value in obj.values():
-            yield from _iter_normalize_entries(value)
-    elif isinstance(obj, list):
-        for item in obj:
-            yield from _iter_normalize_entries(item)
-
-
-def resolve_targets(config: Any, target_fields: List[str]) -> Dict[str, List[Tuple[dict, dict]]]:
-    """目标字段 → 全部命中 (owner, entry)；index 或 field 同名即命中。"""
-    matches: Dict[str, List[Tuple[dict, dict]]] = {field: [] for field in target_fields}
-    lookup = set(target_fields)
-    for owner, entry in _iter_normalize_entries(config):
-        index = entry.get("index")
-        field_value = entry.get("field")
-        for target in lookup:
-            if index == target or field_value == target:
-                matches[target].append((owner, entry))
-    return matches
-
-
-def available_field_names(config: Any) -> List[str]:
-    """配置内全部 index / field 名（非空、保序去重），供错误提示。"""
-    names: List[str] = []
-
-    def _add(name: Any) -> None:
-        text = str(name or "").strip()
-        if text and text not in names:
-            names.append(text)
-
-    for _owner, entry in _iter_normalize_entries(config):
-        _add(entry.get("index"))
-        _add(entry.get("field"))
-    return names
-
 
 def unbind_fixed_bindings(config: Any, target_fields: List[str]) -> int:
     """删除 addFields 过滤器里目标字段的固定值绑定（原地修改）。
