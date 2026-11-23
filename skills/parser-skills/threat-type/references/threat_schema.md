@@ -51,7 +51,7 @@ stdout 摘要：`status` / `message`（含无取值候选提示；json 格式下
 | `groups[].pairs` | 归一规则同枚举映射表（EQUAL 缺省 / REGULAR 自动 `.*` 包裹，行首 `(?i)` 保留）；组内同 orgValue 首现胜出；每行 `mappingValue` 必须在白名单内 |
 | `skipped_rules` | 用户裁决跳过的威胁子规则（如实记录，可省） |
 
-覆盖校验（每组独立，任一违规整单拒绝 `threat_mapping_coverage_rejected`）：组的声明值集＝工作单该字段 `value_counts` 全量键；每个声明值恰被一行命中、每行至少命中一个声明值。
+覆盖校验（每组独立，任一违规整单拒绝 `threat_mapping_coverage_rejected`）：组的声明值集＝工作单该字段 `value_counts` 全量键；每个声明值恰被一行命中、每行至少命中一个声明值。另有跨组一致性校验：同一声明值出现在多个组的值集时，各组解析出的映射值必须一致（`invalid_input` / `value_mapped_inconsistently`）。
 
 ## 3. 产物（threat_finalize.py）
 

@@ -191,10 +191,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         max_values=args.max_values,
     )
 
-    threat_field_states = {
-        rule: inspect_threat_field_state(entity)
-        for rule, entity in zip(threat_rules, _threat_entities(config, threat_rules))
-    }
+    threat_field_states: Dict[str, str] = {}
+    wanted = set(threat_rules)
+    for entity in config:
+        if not isinstance(entity, dict):
+            continue
+        name = entity.get("name")
+        if name in wanted and name not in threat_field_states:
+            threat_field_states[name] = inspect_threat_field_state(entity)
 
     input_path = Path(args.input)
     output = (
@@ -243,18 +247,6 @@ def main(argv: Optional[List[str]] = None) -> int:
     }
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0
-
-
-def _threat_entities(
-    config: List[Any], threat_rules: List[str]
-) -> List[Any]:
-    """按威胁子规则名序取对应 entity（名字典序与 threat_rules 对齐）。"""
-    by_name = {
-        entity.get("name"): entity
-        for entity in config
-        if isinstance(entity, dict) and entity.get("name")
-    }
-    return [by_name[name] for name in threat_rules if name in by_name]
 
 
 if __name__ == "__main__":

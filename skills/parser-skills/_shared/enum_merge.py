@@ -1,8 +1,8 @@
 """枚举映射对写回底座：orgValue 级合并更新与固定值绑定解绑。
 
 enum-mapping 的填充脚本与 threat-type 的收口脚本共用的写回语义
-（2026-11-20 目标黑名单取消裁决后各链路共用的合并约定），禁止在
-技能脚本内复制：
+（任何字段都可经枚举填充/取消维护值映射后，各链路共用的合并约定），
+禁止在技能脚本内复制：
 - 同 orgValue 原地更新 mappingValue / mappingType，新 orgValue 追加，
   未提及的既有映射保留（无状态幂等；删除走取消映射脚本）；
 - 输入内同 orgValue 首现胜出去重；
@@ -12,7 +12,49 @@ enum-mapping 的填充脚本与 threat-type 的收口脚本共用的写回语义
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Iterable, List, Tuple
+
+
+def remove_addfields_keys(
+    filters: List[Any],
+    target_fields: Iterable[str],
+    *,
+    keep_reference: bool = True,
+    require_empty_id: bool = False,
+) -> int:
+    """从 addFields 过滤器列表移除目标字段键（列表原地修改）。
+
+    两种调用语义共用本函数（filter 级单一事实源）：
+    - 枚举解绑：``keep_reference=True``——只删固定值绑定，``%{}`` 引用
+      保留；``require_empty_id=False``——不区分过滤器 id；
+    - 威胁链路整体替换：``keep_reference=False``——固定值与 ``%{}``
+      引用一并清；``require_empty_id=True``——只动 id 为空串的
+      addFields（与链路自产探测的 id 守卫对称）。
+
+    fields 清空后的 addFields 条目整体移除。返回移除键计数。
+    """
+    removed = 0
+    targets = set(target_fields)
+    kept: List[Any] = []
+    for item in filters:
+        if (
+            isinstance(item, dict)
+            and item.get("name") == "addFields"
+            and (not require_empty_id or item.get("id") == "")
+            and isinstance(item.get("fields"), dict)
+        ):
+            fields = item["fields"]
+            for target in list(fields):
+                if target in targets and (
+                    not keep_reference or not str(fields[target]).startswith("%{")
+                ):
+                    del fields[target]
+                    removed += 1
+            if not fields:
+                continue  # 清空后的 addFields 条目整体移除
+        kept.append(item)
+    filters[:] = kept
+    return removed
 
 
 def unbind_fixed_bindings(config: Any, target_fields: List[str]) -> int:
@@ -22,7 +64,6 @@ def unbind_fixed_bindings(config: Any, target_fields: List[str]) -> int:
     返回解绑计数。
     """
     unbound = 0
-    targets = set(target_fields)
 
     def _walk(obj: Any) -> None:
         nonlocal unbound
@@ -31,24 +72,9 @@ def unbind_fixed_bindings(config: Any, target_fields: List[str]) -> int:
             if isinstance(parser, dict):
                 filters = parser.get("filter")
                 if isinstance(filters, list):
-                    kept = []
-                    for item in filters:
-                        if (
-                            isinstance(item, dict)
-                            and item.get("name") == "addFields"
-                            and isinstance(item.get("fields"), dict)
-                        ):
-                            fields = item["fields"]
-                            for target in list(fields):
-                                if target in targets and not str(
-                                    fields[target]
-                                ).startswith("%{"):
-                                    del fields[target]
-                                    unbound += 1
-                            if not fields:
-                                continue  # 清空后的 addFields 条目整体移除
-                        kept.append(item)
-                    parser["filter"] = kept
+                    unbound += remove_addfields_keys(
+                        filters, target_fields, keep_reference=True
+                    )
             for value in obj.values():
                 _walk(value)
         elif isinstance(obj, list):
@@ -110,5 +136,6 @@ def apply_pairs_to_entry(entry: dict, pairs: List[Dict[str, str]]) -> Dict[str, 
 __all__ = [
     "apply_pairs_to_entry",
     "dedup_pairs_first_wins",
+    "remove_addfields_keys",
     "unbind_fixed_bindings",
 ]

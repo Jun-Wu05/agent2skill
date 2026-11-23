@@ -385,6 +385,21 @@ class ThreatEntryConstructionTest(unittest.TestCase):
         self.assertEqual(filters[0]["fields"], {"别的字段": "1"})
         self.assertEqual(filters[1]["name"], "removeFields")
 
+    def test_remove_writings_skips_identified_addfields(self):
+        """id 非空的 addFields 不是链路自产载体，整体替换不动它（与三态探测的 id 守卫对称）。"""
+        entity = make_entity(
+            "规则A",
+            entries=[make_entry(THREAT_TYPE_FIELD)],
+            filters=[
+                {"name": "addFields", "id": "x", "fields": {THREAT_TYPE_FIELD: "别人的绑定"}},
+                make_addfields({THREAT_TYPE_FIELD: "%{threat_name}"}),
+            ],
+        )
+        counts = remove_threat_type_writings(entity)
+        self.assertEqual(counts, {"entries_removed": 1, "bindings_removed": 1})
+        identified = entity["parser"]["filter"][0]
+        self.assertEqual(identified["fields"], {THREAT_TYPE_FIELD: "别人的绑定"})
+
     def test_find_threat_type_entries(self):
         entity = make_entity(
             "规则A",

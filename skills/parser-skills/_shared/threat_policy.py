@@ -1,19 +1,20 @@
 """威胁类型链路纯策略（threat-type 子模块的确定性底座）。
 
-威胁链路三段共用本模块（设计裁决见 #4 票面 2026-11-23 九问）：开单脚本
+威胁链路三段共用本模块：开单脚本
 ``threat_worklist.py`` 产出威胁子规则清单与候选字段值画像，宿主 agent 做
 来源字段判定（按子规则、同名字段归组）与威胁分类，收口脚本
 ``threat_finalize.py`` 做统一覆盖校验与写回。本模块只承载纯函数——不
 IO、不 LLM、不读会话。
 
-关键裁决（对齐 #4 票面）：
+关键裁决：
 - 覆盖校验失败＝整单拒绝（``threat_mapping_coverage_rejected``，四规则
   标识 + 具体值/行指明），不降级、不洗白；
 - 来源字段按子规则判定、同名字段自动归组（异构字段名场景不取交集，
   覆盖校验与映射行写入均按组进行）；
 - 三态写回：链路自产（威胁类型条目带 ``%{X}`` 引用绑定）→ 该子规则
   整体替换、mappings 全量重建；存量条目 / absent → orgValue 合并
-  （与枚举填充共用合并语义，2026-11-20 目标黑名单取消裁决的共存约定）；
+  （与枚举填充共用合并语义——任何字段都可经枚举填充/取消维护值映射
+  的共存约定）；
 - 目标子规则＝事件标注威胁组自动寻址，不支持点名。
 """
 
@@ -23,6 +24,8 @@ import re
 from typing import Any, Collection, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from _shared.entity_scope import resolve_field_scope
+from _shared.enum_merge import remove_addfields_keys
+from _shared.enum_table import split_regular_prefix
 from _shared.standard_catalog import MAPPING_EXCLUDED_INDICES, load_catalog
 
 #: 威胁类型的显示名（normalize index / addFields 键）。
@@ -41,7 +44,8 @@ THREAT_SOURCE_CONTEXT_ERROR_CODE = "threat_mapping_source_context_required"
 #: （链路目标，不能同时充当来源）。
 _POOL_EXCLUDED = frozenset(MAPPING_EXCLUDED_INDICES) | {THREAT_TYPE_FIELD}
 
-# 无语义数字代码（对齐参照 #277）：数字 + 常见代码分隔符。
+# 无语义数字代码：数字 + 常见代码分隔符（输入不含任何语义证据，
+# 不允许按代码表以外的直觉猜测）。
 _CODE_ONLY_SEPARATORS = "-_.:/"
 
 _DETAIL_LIMIT = 5
@@ -159,9 +163,8 @@ def is_code_only_value(value: Any) -> bool:
 
 def _row_pattern_flags(org_value: str) -> Tuple[str, int]:
     """剥离 REGULAR 行的 (?i) 前缀，返回 (模式, flags)。"""
-    if org_value[:4].lower() == "(?i)":
-        return org_value[4:], re.IGNORECASE
-    return org_value, 0
+    prefix, body = split_regular_prefix(org_value)
+    return body, re.IGNORECASE if prefix else 0
 
 
 def row_covers_value(pair: Mapping, value: str) -> bool:
@@ -203,7 +206,7 @@ def validate_threat_coverage(
 ) -> Optional[Dict[str, str]]:
     """对声明值集做确定性覆盖校验；通过返回 None，否则返回违规详情。
 
-    规则（对齐 #4 票面 Q2 裁决＝整单拒绝，报错指明具体值/行）：
+    规则（整单拒绝，报错指明具体值/行）：
     - ``mapping_value_out_of_enum``：映射目标值不在标准枚举白名单内；
     - ``declared_input_uncovered``：某个声明值没有任何映射行覆盖；
     - ``declared_input_multi_matched``：某个声明值被多条映射行同时命中
@@ -316,6 +319,43 @@ def validate_group_assignment(
     return None
 
 
+def validate_cross_group_consistency(
+    group_payloads: Sequence[Mapping],
+) -> Optional[Dict[str, str]]:
+    """跨组同值归类一致性校验（分组判定必须来自同一次分类）。
+
+    同一声明值出现在多个组的值集中时，各组解析出的映射值必须一致
+    （``value_mapped_inconsistently``）；一致返回 None。每组内已由
+    统一覆盖校验保证恰好一行命中，这里只比跨组结果。
+    """
+    resolved: Dict[str, Dict[str, str]] = {}
+    for payload in group_payloads:
+        source = str(payload.get("source_field") or "")
+        pairs = payload.get("pairs") or ()
+        for declared in payload.get("declared") or ():
+            value = str(declared)
+            for pair in pairs:
+                if row_covers_value(pair, value):
+                    resolved.setdefault(value, {})[source] = str(
+                        pair.get("mappingValue")
+                    )
+                    break
+    inconsistencies = [
+        value
+        for value, mapping in resolved.items()
+        if len(mapping) > 1 and len(set(mapping.values())) > 1
+    ]
+    if inconsistencies:
+        return {
+            "rule": "value_mapped_inconsistently",
+            "message": (
+                "以下声明值跨组映射不一致（各组分类必须来自同一次判定，"
+                f"同一值只允许一个威胁类型）: {_preview(sorted(inconsistencies))}"
+            ),
+        }
+    return None
+
+
 # ---------------------------------------------------------------------------
 # 三态探测与条目构造 / 清理
 # ---------------------------------------------------------------------------
@@ -387,8 +427,9 @@ def remove_threat_type_writings(entity: Mapping) -> Dict[str, int]:
     """清除单条子规则中威胁类型的全部 normalize 条目与 addFields 绑定。
 
     链路自产整体替换的前半步（原地修改）：normalize 中 index/field 命中
-    威胁类型的条目全部移除；addFields 过滤器里威胁类型键全部移除（固定
-    值与 ``%{}`` 引用一并清），清空后的 addFields 条目整体移除。
+    威胁类型的条目全部移除；id 为空串的 addFields 过滤器里威胁类型键
+    全部移除（固定值与 ``%{}`` 引用一并清，与链路自产探测的 id 守卫
+    对称），清空后的 addFields 条目整体移除。
     返回 ``{"entries_removed": n, "bindings_removed": n}``。
     """
     entries_removed = 0
@@ -407,20 +448,12 @@ def remove_threat_type_writings(entity: Mapping) -> Dict[str, int]:
     if isinstance(parser, Mapping):
         filters = parser.get("filter")
         if isinstance(filters, list):
-            kept_filters = []
-            for filter_item in filters:
-                if (
-                    isinstance(filter_item, Mapping)
-                    and filter_item.get("name") == "addFields"
-                    and isinstance(filter_item.get("fields"), Mapping)
-                    and THREAT_TYPE_FIELD in filter_item["fields"]
-                ):
-                    del filter_item["fields"][THREAT_TYPE_FIELD]
-                    bindings_removed += 1
-                    if not filter_item["fields"]:
-                        continue
-                kept_filters.append(filter_item)
-            parser["filter"] = kept_filters
+            bindings_removed = remove_addfields_keys(
+                filters,
+                [THREAT_TYPE_FIELD],
+                keep_reference=False,
+                require_empty_id=True,
+            )
     return {
         "entries_removed": entries_removed,
         "bindings_removed": bindings_removed,
@@ -480,6 +513,7 @@ __all__ = [
     "rule_sample_count",
     "threat_field_pools",
     "threat_whitelist",
+    "validate_cross_group_consistency",
     "validate_group_assignment",
     "validate_threat_coverage",
 ]

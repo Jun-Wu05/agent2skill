@@ -403,6 +403,99 @@ class ThreatFinalizeCliTest(unittest.TestCase):
         skipped = {e["name"]: e for e in result}["无源规则"]
         self.assertFalse(any(e["index"] == "威胁类型" for e in skipped["normalize"]))
 
+    def test_cross_group_inconsistent_mapping_rejected(self):
+        """跨组同值归类一致（Q3 裁决）：同一值在两组映射到不同威胁类型 → 整单拒绝。"""
+        entities = [
+            make_entity(
+                "恶意软件规则", entries=[make_entry("threat_name")],
+                event_name="病毒检测", sample_result=["s1"],
+            ),
+            make_entity(
+                "Web攻击规则", entries=[make_entry("threat_info")],
+                event_name="网络攻击", sample_result=["s1"],
+            ),
+        ]
+        worklist = make_workload(
+            self._tmp / "wl.json",
+            ["恶意软件规则", "Web攻击规则"],
+            [
+                ("threat_name", {"挖矿行为": 1}),
+                ("threat_info", {"挖矿行为": 1, "Webshell上传": 1}),
+            ],
+        )
+        judgments = make_judgment_file(
+            self._tmp / "jd.json",
+            [
+                {
+                    "source_field": "threat_name",
+                    "rules": ["恶意软件规则"],
+                    "pairs": [pair("挖矿", "挖矿木马")],
+                },
+                {
+                    "source_field": "threat_info",
+                    "rules": ["Web攻击规则"],
+                    "pairs": [pair("挖矿", "勒索病毒"), pair("Webshell", "Webshell")],
+                },
+            ],
+        )
+        code, payload = self._run(
+            "--input", str(self._config(entities)),
+            "--worklist", str(worklist),
+            "--judgments", str(judgments),
+        )
+        self.assertEqual(code, 1)
+        self.assertEqual(payload["code"], "invalid_input")
+        self.assertIn("value_mapped_inconsistently", payload["message"])
+        self.assertIn("挖矿行为", payload["message"])
+
+    def test_cross_group_consistent_mapping_passes(self):
+        entities = [
+            make_entity(
+                "恶意软件规则", entries=[make_entry("threat_name")],
+                event_name="病毒检测", sample_result=["s1"],
+            ),
+            make_entity(
+                "Web攻击规则", entries=[make_entry("threat_info")],
+                event_name="网络攻击", sample_result=["s1"],
+            ),
+        ]
+        worklist = make_workload(
+            self._tmp / "wl.json",
+            ["恶意软件规则", "Web攻击规则"],
+            [
+                ("threat_name", {"挖矿行为": 1}),
+                ("threat_info", {"挖矿行为": 1, "Webshell上传": 1}),
+            ],
+        )
+        judgments = make_judgment_file(
+            self._tmp / "jd.json",
+            [
+                {
+                    "source_field": "threat_name",
+                    "rules": ["恶意软件规则"],
+                    "pairs": [pair("挖矿", "挖矿木马")],
+                },
+                {
+                    "source_field": "threat_info",
+                    "rules": ["Web攻击规则"],
+                    "pairs": [pair("挖矿", "挖矿木马"), pair("Webshell", "Webshell")],
+                },
+            ],
+        )
+        code, payload = self._run(
+            "--input", str(self._config(entities)),
+            "--worklist", str(worklist),
+            "--judgments", str(judgments),
+        )
+        self.assertEqual(code, 0)
+        result = json.loads(Path(payload["output"]).read_text(encoding="utf-8"))
+        by_name = {e["name"]: e for e in result}
+        for rule, field in (("恶意软件规则", "threat_name"), ("Web攻击规则", "threat_info")):
+            entry = next(
+                e for e in by_name[rule]["normalize"] if e["index"] == "威胁类型"
+            )
+            self.assertIn("挖矿木马", [m["mappingValue"] for m in entry["mappings"]])
+
     # -- 守卫链 -------------------------------------------------------------
 
     def test_group_assignment_unassigned_rejected(self):

@@ -19,10 +19,13 @@ REGULAR 包裹 / 回退语义），两入口不得各自实现。
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 #: mappingType 合法值（写入 normalize[].mappings 的匹配方式）。
 VALID_MAPPING_TYPES = ("EQUAL", "REGULAR")
+
+#: REGULAR 行首大小写不敏感标记（对齐平台运行时正则语义）。
+CASE_INSENSITIVE_PREFIX = "(?i)"
 
 
 class EnumTableError(Exception):
@@ -32,6 +35,17 @@ class EnumTableError(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+def split_regular_prefix(org_value: str) -> Tuple[str, str]:
+    """剥离 REGULAR 行首大小写不敏感标记，返回 (前缀, 主体)。
+
+    归一（本模块，前缀保留在最前）与覆盖匹配（threat_policy，前缀转
+    IGNORECASE flags）共用本函数，禁止两处各自识别。
+    """
+    if org_value[:4].lower() == CASE_INSENSITIVE_PREFIX:
+        return org_value[:4], org_value[4:]
+    return "", org_value
 
 
 def normalize_pair(
@@ -51,11 +65,7 @@ def normalize_pair(
     if not org:
         return None
     if normalized_type == "REGULAR":
-        flag_prefix = ""
-        body = org
-        if body[:4].lower() == "(?i)":
-            flag_prefix = body[:4]
-            body = body[4:]
+        flag_prefix, body = split_regular_prefix(org)
         if not body.startswith(".*"):
             body = ".*" + body + ".*"
         org = flag_prefix + body

@@ -27,6 +27,9 @@ CLI 用法:
 - 工作单与配置的威胁子规则不一致 → ``invalid_input``（重新生成工作单）；
 - 分组判定未恰好划分全部威胁子规则（非威胁规则入组 / 重复分组 /
   既未分组也未跳过）→ ``invalid_input``（附规则标识与具体规则名）；
+- 跨组同值归类不一致（同一声明值在不同组映射到不同威胁类型）→
+  ``invalid_input``（``value_mapped_inconsistently``，各组分类必须来自
+  同一次判定）；
 - 来源字段不在工作单候选中、或不在某子规则字段池中 → ``invalid_input``；
 - 分组无有效映射对 → ``invalid_input``；
 - 标准字段目录威胁类型行异常 → ``threat_mapping_reference_unavailable``；
@@ -42,8 +45,8 @@ CLI 用法:
   sim=true / core=false``），mappings 全量重建；
 - **absent**：同 chain 的追加写法（无旧物可清）；
 - **existing**（存量条目）：保留条目原状，解绑其固定值绑定后按
-  orgValue 合并更新 mappings（与枚举填充共用 ``_shared/enum_merge``，
-  2026-11-20 黑名单取消裁决的共存约定）；
+  orgValue 合并更新 mappings（与枚举填充共用 ``_shared/enum_merge``
+  的合并语义，手工维护的值映射与链路写入可共存）；
 - 零变更 → 成功幂等提示，产物照常输出。
 """
 
@@ -84,6 +87,7 @@ from _shared.threat_policy import (
     rule_sample_count,
     threat_field_pools,
     threat_whitelist,
+    validate_cross_group_consistency,
     validate_group_assignment,
     validate_threat_coverage,
 )
@@ -351,9 +355,18 @@ def main(argv: Optional[List[str]] = None) -> int:
                 "source_field": source_field,
                 "rules": group["rules"],
                 "pairs": pairs,
+                "declared": declared,
                 "declared_count": len(declared),
                 "duplicates": duplicates,
             }
+        )
+
+    # 跨组同值归类一致性（各组分类必须来自同一次判定）
+    inconsistency = validate_cross_group_consistency(prepared_groups)
+    if inconsistency is not None:
+        return _print_error(
+            "invalid_input",
+            f"分组判定不成立（{inconsistency['rule']}）: {inconsistency['message']}",
         )
 
     # 写回（深拷贝，原子：全部校验已通过，一次构造一次落盘）
