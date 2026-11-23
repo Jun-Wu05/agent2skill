@@ -30,7 +30,7 @@
 
 - **输入**：`--input` 一个本地配置文件，自动识别（先按原生 JSON 解析，失败再按 Base64→JSON 解码）
 - **输出**（每次修改后立即产出，不原地覆盖输入）：
-  1. 修改后配置 JSON（默认 `<输入名>.modified.json`）——子模块间文件衔接的产物，可作为下一个操作的输入
+  1. 修改后配置 JSON（默认 `<输入名>_modified.json`）——子模块间文件衔接的产物，可作为下一个操作的输入
   2. 平台可导入的 Base64 文件（`fieldadjusted_config_YYYYMMDD_HHMM.txt`，与输出 JSON 同目录）
   3. stdout 打印 JSON 摘要报告（`status` / `message` / `output` / `export`）
 - **错误码**（稳定，脚本退出码 1）：
@@ -299,7 +299,7 @@ stdout 报告：
 {
   "status": "success",
   "message": "成功为 2 个 entity 添加字段 '主机ip'（跳过 1 个无 normalize 的 entity）",
-  "output": "testdata/sample_config.base64.modified.json",
+  "output": "testdata/sample_config.base64_modified.json",
   "export": "testdata/fieldadjusted_config_20261117_0830.txt"
 }
 ```
@@ -318,7 +318,7 @@ stdout 报告：
 {
   "status": "success",
   "message": "成功从 1 个 entity 删除 1 个字段；跳过：某厂_IPS_json_子规则（缺 src_ip）（跳过 1 个无 normalize 的 entity）",
-  "output": "testdata/sample_config.base64.modified.json",
+  "output": "testdata/sample_config.base64_modified.json",
   "export": "testdata/fieldadjusted_config_20261118_0924.txt"
 }
 ```
@@ -343,7 +343,7 @@ stdout 报告：
 {
   "status": "success",
   "message": "成功合并 1 个 entity 的字段为 '合并字段'；跳过：某厂_IPS_json_子规则（缺 src_ip）（跳过 1 个无 normalize 的 entity）",
-  "output": "testdata/sample_config.base64.modified.json",
+  "output": "testdata/sample_config.base64_modified.json",
   "export": "testdata/fieldadjusted_config_20261118_1430.txt"
 }
 ```
@@ -362,7 +362,7 @@ stdout 报告：
 {
   "status": "success",
   "message": "成功为 1 个 entity 启用 base64 解码: src_ip；跳过：某厂_IPS_json_子规则（缺 src_ip）（跳过 1 个无 normalize 的 entity）",
-  "output": "testdata/sample_config.base64.modified.json",
+  "output": "testdata/sample_config.base64_modified.json",
   "export": "testdata/fieldadjusted_config_20261118_1538.txt"
 }
 ```
@@ -383,7 +383,7 @@ stdout 报告：
 {
   "status": "success",
   "message": "成功为 1 个 entity 添加正则提取字段 'user'（来源: original_log）（目标 1 个）",
-  "output": "testdata/sample_config.base64.modified.json",
+  "output": "testdata/sample_config.base64_modified.json",
   "export": "testdata/fieldadjusted_config_20261118_1630.txt"
 }
 ```

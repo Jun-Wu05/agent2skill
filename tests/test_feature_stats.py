@@ -184,7 +184,7 @@ class FeatureStatsCliTest(unittest.TestCase):
             "--input", str(xlsx), "--format", "json", "--feature-field", "type"
         )
         self.assertEqual(code, 0)
-        expected = self._tmp / "logs.stats.json"
+        expected = self._tmp / "logs_stats.json"
         self.assertEqual(Path(payload["output"]), expected)
         self.assertTrue(expected.is_file())
 

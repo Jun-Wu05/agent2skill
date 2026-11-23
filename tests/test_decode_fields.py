@@ -402,7 +402,7 @@ class CliEndToEndTest(unittest.TestCase):
             ).decode("ascii"),
             encoding="utf-8",
         )
-        output = self._tmp / "out.modified.json"
+        output = self._tmp / "out_modified.json"
         code, stdout = self._run(
             "--input", str(b64_file),
             "--fields", "src_ip",
@@ -473,7 +473,7 @@ class CliEndToEndTest(unittest.TestCase):
         self.assertEqual(report["code"], "config_required")
 
     def test_e2e_no_export_flag(self):
-        output = self._tmp / "out.modified.json"
+        output = self._tmp / "out_modified.json"
         code, stdout = self._run(
             "--input", str(self.FIXTURE),
             "--fields", "dst_ip",

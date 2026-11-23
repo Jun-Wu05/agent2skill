@@ -133,11 +133,11 @@ class WhiteboardPathEndToEndTest(unittest.TestCase):
     def setUp(self):
         self._tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self._tmp, ignore_errors=True)
-        self.subrules = self._tmp / "whiteboard.subrules.json"
+        self.subrules = self._tmp / "whiteboard_subrules.json"
         self.subrules.write_text(
             json.dumps(WHITEBOARD_SUBRULES, ensure_ascii=False), encoding="utf-8"
         )
-        self.classified = self._tmp / "whiteboard.classified.json"
+        self.classified = self._tmp / "whiteboard_classified.json"
         self.classified.write_text(
             json.dumps(_classified(), ensure_ascii=False), encoding="utf-8"
         )
@@ -242,10 +242,10 @@ class WhiteboardPathEndToEndTest(unittest.TestCase):
         self.assertEqual(code, 0)
         payload = json.loads(stdout)
         self.assertEqual(
-            Path(payload["output"]), self._tmp / "whiteboard.mapped_subrules.json"
+            Path(payload["output"]), self._tmp / "whiteboard_mapped_subrules.json"
         )
         self.assertEqual(
-            Path(payload["entry_output"]), self._tmp / "whiteboard.entry_rules.json"
+            Path(payload["entry_output"]), self._tmp / "whiteboard_entry_rules.json"
         )
 
     def test_no_export_flag(self):
@@ -304,7 +304,7 @@ class ConfigPathEndToEndTest(unittest.TestCase):
         self.assertEqual(payload["matched"], 1)
         self.assertEqual(payload["unmatched"], 1)
         self.assertEqual(
-            Path(payload["output"]), self._tmp / "config.mapped_config.json"
+            Path(payload["output"]), self._tmp / "config_mapped_config.json"
         )
         updated = json.loads(Path(payload["output"]).read_text(encoding="utf-8"))
         by_index = {e["index"]: e for e in updated[0]["normalize"]}
@@ -390,7 +390,7 @@ class ErrorContractTest(unittest.TestCase):
 
     def test_b2_missing_vendor_rejected(self):
         subrules = self._write(
-            "w.subrules.json",
+            "w_subrules.json",
             [{"name": "a", "parser": {"name": "json"}, "normalize": [_entry("dst_ip")]}],
         )
         classified = self._write("c.json", _classified())
@@ -406,7 +406,7 @@ class ErrorContractTest(unittest.TestCase):
 
     def test_b2_syslog_kv_without_identifier_rejected(self):
         subrules = self._write(
-            "w.subrules.json",
+            "w_subrules.json",
             [{"name": "a", "parser": {"name": "json"}, "normalize": [_entry("user")]}],
         )
         classification = _classified()

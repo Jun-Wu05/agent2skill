@@ -17,7 +17,7 @@ CLI 用法:
         ``_shared/enum_table.normalize_pairs``；
       - ``--excel`` 映射表（Sheet 名=目标字段、三列，经
         ``_shared/enum_table.load_enum_table`` 读取）。
-输出: ``<输入名>.enumfilled.json`` + Base64 导出
+输出: ``<输入名>_enumfilled.json`` + Base64 导出
       ``enummapping_config_{时间戳}.txt`` + stdout JSON 摘要。
 
 守卫链（任一命中整单拒绝，一行不写）:
@@ -157,7 +157,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--output", "-o", default=None,
-        help="修改后配置 JSON 输出路径（缺省 <输入名>.enumfilled.json）",
+        help="修改后配置 JSON 输出路径（缺省 <输入名>_enumfilled.json）",
     )
     parser.add_argument(
         "--no-export", action="store_true",
@@ -246,7 +246,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     output = (
         Path(args.output)
         if args.output
-        else input_path.with_name(input_path.stem + ".enumfilled.json")
+        else input_path.with_name(input_path.stem + "_enumfilled.json")
     )
     written = skill_report.write_result(
         updated, output, kind="enummapping_config", make_export=not args.no_export

@@ -375,7 +375,7 @@ class CliEndToEndTest(unittest.TestCase):
             base64.b64encode(json.dumps(payload, ensure_ascii=False).encode("utf-8")).decode("ascii"),
             encoding="utf-8",
         )
-        output = self._tmp / "out.modified.json"
+        output = self._tmp / "out_modified.json"
         code, stdout = self._run(
             "--input", str(b64_file),
             "--field", "主机ip", "--value", "1.1.1.1",
@@ -435,7 +435,7 @@ class CliEndToEndTest(unittest.TestCase):
         self.assertFalse((self._tmp / "o.json").exists())
 
     def test_e2e_valid_target_scopes_output(self):
-        output = self._tmp / "scoped.modified.json"
+        output = self._tmp / "scoped_modified.json"
         code, stdout = self._run(
             "--input", str(self.FIXTURE), "--field", "主机ip", "--value", "1.1.1.1",
             "--target", "某厂_AUDIT_json_子规则",

@@ -191,7 +191,7 @@ class RunCliContractTest(unittest.TestCase):
         self.assertFalse(output.exists())
 
     def test_success_default_output_and_export(self):
-        """成功路径：缺省 <输入名>.modified.json + 平台可导入 Base64 导出 + payload 契约。"""
+        """成功路径：缺省 <输入名>_modified.json + 平台可导入 Base64 导出 + payload 契约。"""
         code, stdout = self._run(
             _make_spec(), "--input", str(self.config), "--field", "x"
         )
@@ -199,7 +199,7 @@ class RunCliContractTest(unittest.TestCase):
         report = json.loads(stdout)
         self.assertEqual(report["status"], "success")
         self.assertEqual(report["message"], "count=1")
-        default_output = self._tmp / "config.modified.json"
+        default_output = self._tmp / "config_modified.json"
         self.assertEqual(Path(report["output"]), default_output)
         updated = json.loads(default_output.read_text(encoding="utf-8"))
         self.assertEqual(updated[0]["name"], "rule_a")

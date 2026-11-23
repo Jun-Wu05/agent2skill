@@ -9,7 +9,7 @@ CLI 用法:
                          [--output <路径>] [--no-export]
 
 输入: 配置族文件（Base64 txt / 原生 JSON / TXT，规则数组）
-输出: ``<输入名>.enumunmapped.json`` + Base64 导出
+输出: ``<输入名>_enumunmapped.json`` + Base64 导出
       ``enummapping_config_{时间戳}.txt`` + stdout JSON 摘要。
 
 守卫链（任一命中整单拒绝，一行不写）:
@@ -80,7 +80,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--output", "-o", default=None,
-        help="修改后配置 JSON 输出路径（缺省 <输入名>.enumunmapped.json）",
+        help="修改后配置 JSON 输出路径（缺省 <输入名>_enumunmapped.json）",
     )
     parser.add_argument(
         "--no-export", action="store_true",
@@ -165,7 +165,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     output = (
         Path(args.output)
         if args.output
-        else input_path.with_name(input_path.stem + ".enumunmapped.json")
+        else input_path.with_name(input_path.stem + "_enumunmapped.json")
     )
     written = skill_report.write_result(
         updated, output, kind="enummapping_config", make_export=not args.no_export

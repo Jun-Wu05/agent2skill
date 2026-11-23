@@ -2,7 +2,7 @@
 
 接缝：threat-type/scripts/threat_worklist.py 的 main(argv)——
 stdout JSON（status/message/output/threat_rules/candidate_count/
-whitelist_size 或 status/error/code/message）+ <输入名>.threat_worklist.json
+whitelist_size 或 status/error/code/message）+ <输入名>_threat_worklist.json
 产物 + 退出码。守卫链与画像契约见脚本 docstring；夹具为合成 entities
 JSON 与日志 xlsx。
 """
@@ -161,7 +161,7 @@ class ThreatWorklistCliTest(unittest.TestCase):
             "--input", str(config), "--log", str(log), "--format", "json"
         )
         self.assertEqual(code, 0)
-        self.assertTrue(payload["output"].endswith("config.threat_worklist.json"))
+        self.assertTrue(payload["output"].endswith("config_threat_worklist.json"))
 
     def test_threat_field_states_reflect_config(self):
         entities = self._default_config()

@@ -13,7 +13,7 @@
 
 ## 前置条件
 
-- **白板路径**：日志类型提取产物 `<输入名>.subrules.json` + `<输入名>.classified.json`（见其 guide 第 5 步）；向用户问清**数据源厂商与产品**（入口规则必填，缺失整单拒绝）
+- **白板路径**：日志类型提取产物 `<输入名>_subrules.json` + `<输入名>_classified.json`（见其 guide 第 5 步）；向用户问清**数据源厂商与产品**（入口规则必填，缺失整单拒绝）
 - **配置路径**：配置族文件（Base64 txt / 原生 JSON / TXT，规则数组）
 - 标准字段目录（625 条）与同义词/标签资产随技能仓库提供，脚本自动定位，无需用户输入
 
@@ -29,10 +29,10 @@
 
 ```bash
 python <parser-skills>/field-mapping/scripts/mapping_candidates.py \
-  --subrules <输入名>.subrules.json [--excel <日志表.xlsx>]
+  --subrules <输入名>_subrules.json [--excel <日志表.xlsx>]
 ```
 
-产出 `<输入名>.subrules.candidates.json`：每个待映射字段的 Top-10 候选（附分数/英文名/对象/类型/描述/枚举白名单）+ 值画像（`--excel` 给了用全量日志，否则用白板自带样本）+ 枚举短路标记。
+产出 `<输入名>_subrules_candidates.json`：每个待映射字段的 Top-10 候选（附分数/英文名/对象/类型/描述/枚举白名单）+ 值画像（`--excel` 给了用全量日志，否则用白板自带样本）+ 枚举短路标记。
 
 **完成判据**：stdout `status: success`；`field_count` 与白板字段数一致。全部已映射或属排除索引时**成功跳过**（空候选单、`field_count: 0`）——如实告知用户即可。
 
@@ -70,7 +70,7 @@ python <parser-skills>/field-mapping/scripts/mapping_candidates.py \
 
 ```bash
 python <parser-skills>/field-mapping/scripts/mapping_finalize.py \
-  --subrules <输入名>.subrules.json --classified <输入名>.classified.json \
+  --subrules <输入名>_subrules.json --classified <输入名>_classified.json \
   --mappings mappings.json --vendor <厂商> --product <产品>
 ```
 
@@ -78,8 +78,8 @@ python <parser-skills>/field-mapping/scripts/mapping_finalize.py \
 
 | 产物 | 文件 | 用途 |
 |---|---|---|
-| 映射后子规则 | `<输入名>.mapped_subrules.json` | 字段映射 + 事件标注写回的子规则 |
-| 入口规则 | `<输入名>.entry_rules.json` | 按 logtype 路由到子规则的总闸（本身不含映射） |
+| 映射后子规则 | `<输入名>_mapped_subrules.json` | 字段映射 + 事件标注写回的子规则 |
+| 入口规则 | `<输入名>_entry_rules.json` | 按 logtype 路由到子规则的总闸（本身不含映射） |
 | Base64 导出 | `mappedconfig_subrules_YYYYMMDD_HHMM.txt` + `mappedconfig_mainrules_YYYYMMDD_HHMM.txt` | 平台可导入（`--no-export` 跳过） |
 
 **完成判据**：stdout `status: success`。
@@ -96,7 +96,7 @@ python <parser-skills>/field-mapping/scripts/mapping_finalize.py \
 2. 同白板路径第 3 步写 mappings.json（**只写 mappings 段，无 events**——配置路径不做事件标注）
 3. `python <parser-skills>/field-mapping/scripts/mapping_finalize.py --config <配置文件> --mappings mappings.json`
 
-产物：`<输入名>.mapped_config.json` + `fieldmapped_config_YYYYMMDD_HHMM.txt`。既有映射（field 非空的条目）原样保留且在占用裁决中恒赢。
+产物：`<输入名>_mapped_config.json` + `fieldmapped_config_YYYYMMDD_HHMM.txt`。既有映射（field 非空的条目）原样保留且在占用裁决中恒赢。
 
 ## 约束与边界
 

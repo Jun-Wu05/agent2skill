@@ -11,14 +11,14 @@ kv 规则逐行提取键值），未给或解析器不支持时退回白板子�
 配置 normalize[].result 预览值。
 
 CLI 用法:
-    白板路径:  python mapping_candidates.py --subrules <白板.subrules.json>
+    白板路径:  python mapping_candidates.py --subrules <白板_subrules.json>
                                     [--excel <日志数据表.xlsx>]
     配置路径:  python mapping_candidates.py --config <配置文件>
     通用:         [--output <候选.json>] [--top-k 10]
 
 输入支持: --subrules / --config 均为规则 JSON 数组（Base64 txt / 原生 JSON /
 TXT 自动识别）；--excel 须为含「原始日志」列的数据表。
-输出: 候选 JSON（缺省 <输入名>.candidates.json）+ stdout JSON 摘要
+输出: 候选 JSON（缺省 <输入名>_candidates.json）+ stdout JSON 摘要
 """
 
 from __future__ import annotations
@@ -268,7 +268,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--output", "-o", default=None,
-        help="候选 JSON 输出路径（缺省 <输入名>.candidates.json）",
+        help="候选 JSON 输出路径（缺省 <输入名>_candidates.json）",
     )
     parser.add_argument(
         "--top-k", type=int, default=DEFAULT_TOP_K,
@@ -305,7 +305,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     output = (
         Path(args.output)
         if args.output
-        else input_path.with_name(input_path.stem + ".candidates.json")
+        else input_path.with_name(input_path.stem + "_candidates.json")
     )
 
     if not rules:

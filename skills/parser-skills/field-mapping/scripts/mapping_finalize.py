@@ -9,7 +9,7 @@ field-mapping 技能的阶段②脚本（收口）：宿主 agent 读取阶段�
 绑定、非法不写）与入口规则生成（白板路径），并按平台下载命名导出 Base64。
 
 CLI 用法:
-    白板路径:  python mapping_finalize.py --subrules <白板.subrules.json>
+    白板路径:  python mapping_finalize.py --subrules <白板_subrules.json>
                                     --classified <分类结果.json> --mappings <判定.json>
                                     --vendor <厂商> --product <产品>
                                     [--output ...] [--entry-output ...] [--no-export]
@@ -22,10 +22,10 @@ mappings.json 契约（宿主 agent 语义层）:
     （裸数组视为纯 mappings，无 events）
 
 输出:
-    白板路径: 映射后子规则 JSON（缺省 <输入名>.mapped_subrules.json）+ 入口规则 JSON
-        （缺省 <输入名>.entry_rules.json）+ Base64 导出
+    白板路径: 映射后子规则 JSON（缺省 <输入名>_mapped_subrules.json）+ 入口规则 JSON
+        （缺省 <输入名>_entry_rules.json）+ Base64 导出
         （mappedconfig_subrules_YYYYMMDD_HHMM.txt / mappedconfig_mainrules_YYYYMMDD_HHMM.txt）
-    配置路径: 映射后配置 JSON（缺省 <输入名>.mapped_config.json）+ Base64 导出
+    配置路径: 映射后配置 JSON（缺省 <输入名>_mapped_config.json）+ Base64 导出
         （fieldmapped_config_YYYYMMDD_HHMM.txt）
     两者均附 stdout JSON 摘要（映射/未匹配/短路/sanitize/冲突/事件统计）。
 
@@ -139,10 +139,11 @@ def _collect_event_judgments(events: List[Any], rule_names: set) -> Tuple[Dict[s
 
 
 def _base_stem(path: Path) -> str:
-    """子规则输入名去掉 .subrules 后缀作为产物基名。"""
+    """子规则输入名去掉 _subrules（或历史 .subrules）后缀作为产物基名。"""
     stem = path.stem
-    if stem.endswith(".subrules"):
-        stem = stem[: -len(".subrules")]
+    for suffix in ("_subrules", ".subrules"):
+        if stem.endswith(suffix):
+            return stem[: -len(suffix)]
     return stem
 
 
@@ -158,7 +159,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--vendor", default=None, help="数据源厂商（白板路径必填）")
     parser.add_argument("--product", default=None, help="数据源产品（白板路径必填）")
     parser.add_argument("--output", "-o", default=None, help="映射结果 JSON 输出路径（缺省按路径命名）")
-    parser.add_argument("--entry-output", default=None, help="入口规则 JSON 输出路径（仅白板路径，缺省 <输入名>.entry_rules.json）")
+    parser.add_argument("--entry-output", default=None, help="入口规则 JSON 输出路径（仅白板路径，缺省 <输入名>_entry_rules.json）")
     parser.add_argument("--no-export", action="store_true", help="不产出 Base64 导出文件（缺省会一并产出）")
     parser.add_argument("--top-k", type=int, default=DEFAULT_TOP_K, help=f"候选校验上限，与阶段①一致（缺省 {DEFAULT_TOP_K}）")
     args = parser.parse_args(argv)
@@ -264,12 +265,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         mapped_output = (
             Path(args.output)
             if args.output
-            else input_path.with_name(base + ".mapped_subrules.json")
+            else input_path.with_name(base + "_mapped_subrules.json")
         )
         entry_output = (
             Path(args.entry_output)
             if args.entry_output
-            else input_path.with_name(base + ".entry_rules.json")
+            else input_path.with_name(base + "_entry_rules.json")
         )
         written = skill_report.write_result(
             mapped, mapped_output, make_export=not args.no_export,
@@ -313,7 +314,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         output = (
             Path(args.output)
             if args.output
-            else input_path.with_name(base + ".mapped_config.json")
+            else input_path.with_name(base + "_mapped_config.json")
         )
         written = skill_report.write_result(
             updated, output, make_export=not args.no_export,

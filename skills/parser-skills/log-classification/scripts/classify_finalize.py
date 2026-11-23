@@ -19,8 +19,8 @@ labels.json 契约（宿主 agent 语义层，logtype 必须严格等于统计�
     {"classification_details": [{"logtype": "<特征值>", "meaning": "<业务含义>"}]}
     （也接受裸数组 [{"logtype": ..., "meaning": ...}]）
 
-输出: 分类结果 JSON（缺省 <输入名>.classified.json）+ 白板子规则 JSON
-（缺省 <输入名>.subrules.json）+ Base64 导出
+输出: 分类结果 JSON（缺省 <输入名>_classified.json）+ 白板子规则 JSON
+（缺省 <输入名>_subrules.json）+ Base64 导出
 （unmappedconfig_subrules_YYYYMMDD_HHMM.txt）+ stdout JSON 摘要
 
 版本守卫（guide.md 纪律，脚本不做）：重新生成本产物前，确认下游尚未
@@ -247,11 +247,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--labels", required=True, help="宿主 agent 语义标注 JSON 路径")
     parser.add_argument(
         "--output", "-o", default=None,
-        help="分类结果 JSON 输出路径（缺省 <输入名>.classified.json）",
+        help="分类结果 JSON 输出路径（缺省 <输入名>_classified.json）",
     )
     parser.add_argument(
         "--subrules-output", default=None,
-        help="白板子规则 JSON 输出路径（缺省 <输入名>.subrules.json）",
+        help="白板子规则 JSON 输出路径（缺省 <输入名>_subrules.json）",
     )
     parser.add_argument(
         "--no-export", action="store_true",
@@ -287,12 +287,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     output = (
         Path(args.output)
         if args.output
-        else input_path.with_name(input_path.stem + ".classified.json")
+        else input_path.with_name(input_path.stem + "_classified.json")
     )
     subrules_output = (
         Path(args.subrules_output)
         if args.subrules_output
-        else input_path.with_name(input_path.stem + ".subrules.json")
+        else input_path.with_name(input_path.stem + "_subrules.json")
     )
 
     raw_lines = table["raw_log_lines"]

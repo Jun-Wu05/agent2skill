@@ -361,7 +361,7 @@ class CliTest(unittest.TestCase):
             code = mc.main(argv)
         return code, stdout.getvalue()
 
-    def _write_subrules(self, entities, name="whiteboard.subrules.json"):
+    def _write_subrules(self, entities, name="whiteboard_subrules.json"):
         path = self._tmp / name
         path.write_text(json.dumps(entities, ensure_ascii=False), encoding="utf-8")
         return path
@@ -402,7 +402,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual(payload["status"], "success")
         self.assertEqual(payload["field_count"], 3)
         output = Path(payload["output"])
-        self.assertEqual(output, self._tmp / "whiteboard.subrules.candidates.json")
+        self.assertEqual(output, self._tmp / "whiteboard_subrules_candidates.json")
         document = json.loads(output.read_text(encoding="utf-8"))
         by_field = {f["field"]: f for f in document["fields"]}
         self.assertIn("目的地址", [c["name"] for c in by_field["dst_ip"]["candidates"]])
@@ -465,7 +465,7 @@ class CliTest(unittest.TestCase):
         # 全映射跳过守卫：成功跳过（空候选单），既有映射保留——幂等重跑友好
         sample = ROOT / "testdata" / "sample_config.json"
         code, stdout = self._run(
-            ["--config", str(sample), "--output", str(self._tmp / "out.candidates.json")]
+            ["--config", str(sample), "--output", str(self._tmp / "out_candidates.json")]
         )
         self.assertEqual(code, 0)
         payload = json.loads(stdout)

@@ -356,7 +356,7 @@ class CliEndToEndTest(unittest.TestCase):
             ).decode("ascii"),
             encoding="utf-8",
         )
-        output = self._tmp / "out.modified.json"
+        output = self._tmp / "out_modified.json"
         code, stdout = self._run(
             "--input", str(b64_file),
             "--sources", "src_ip,original_log",

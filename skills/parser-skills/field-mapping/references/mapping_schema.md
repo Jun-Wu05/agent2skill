@@ -68,14 +68,14 @@
 
 ## 3. 白板路径产物
 
-**`<输入名>.mapped_subrules.json`**——白板子规则数组，收口后每条：
+**`<输入名>_mapped_subrules.json`**——白板子规则数组，收口后每条：
 
 - 命中判定的 normalize 条目：`field`=标准字段目录规范名、`entity`=目录首个对象、`sim`=true、`core`=false
 - 未匹配/占用冲突败者：`field`/`entity`/`sim`/`core` 置 null（防重新映射残留）
 - 排除索引（original_log / 日志类型）原样保留
 - 事件标注（有判定的子规则）：parser.filter 末尾追加 `{"fields": {"事件名称": ..., "事件级别": ...}, "name": "addFields", "id": ""}`；normalize 末尾追加事件名称/事件级别两条目（EQUAL 恒等映射；级别 `value` 写码值、`result` 保持显示值，长度按该子规则样本数）
 
-**`<输入名>.entry_rules.json`**——单元素数组（一条入口规则）：
+**`<输入名>_entry_rules.json`**——单元素数组（一条入口规则）：
 
 - `name`：`{厂商}_{产品}_通用_入口规则{MMDD}`；parser 按 log_format 五分支配置（纯JSON：json + conditionMatch + 日志类型映射；syslog+JSON：orgRegex + conditionMatch；纯KV：delimitWithKeyMap + 日志类型映射 + kv conditionMatch；syslog+KV：orgRegex + conditionMatch；其余：orgRegex + redirect）
 - `sample`：各 logtype 样本以 `#next#` 连接；normalize 预置 original_log（result=样本列表），纯 JSON/纯 KV 另有「日志类型」占位条目
@@ -84,7 +84,7 @@
 
 ## 4. 配置路径产物
 
-**`<输入名>.mapped_config.json`**——原配置数组（递归遍历所有 normalize）：
+**`<输入名>_mapped_config.json`**——原配置数组（递归遍历所有 normalize）：
 
 - 只写 index 命中判定**且原 field 为空**的条目；既有映射（field 非空）原样保留
 - 未匹配条目保持原样（field 仍为空）；排除索引不动

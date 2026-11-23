@@ -53,7 +53,7 @@ class ClassifyFinalizeCliTest(unittest.TestCase):
                 ["--input", str(xlsx), "--feature-field", "type", *format_args]
             )
         assert code == 0, buf.getvalue()
-        stats = self._tmp / (name.replace(".xlsx", ".stats.json"))
+        stats = self._tmp / (name.replace(".xlsx", "_stats.json"))
         assert stats.is_file()
         labels_path = self._tmp / "labels.json"
         labels_path.write_text(
@@ -168,7 +168,7 @@ class ClassifyFinalizeCliTest(unittest.TestCase):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             feature_stats.main(["--input", str(xlsx), "--format", "kv", "--feature-field", "type"])
-        stats = self._tmp / "logs.stats.json"
+        stats = self._tmp / "logs_stats.json"
         labels = self._tmp / "labels.json"
         labels.write_text(json.dumps({"classification_details": []}), encoding="utf-8")
         code, payload = self._run_finalize(xlsx, stats, labels)

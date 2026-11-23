@@ -18,7 +18,7 @@ CLI 用法:
                            [--output <枚举值.json>] [--template]
 
 输入: Excel 数据表（须含「原始日志」列）
-输出: 枚举值 JSON（缺省 <输入名>.enum_values.json）+ stdout JSON 摘要；
+输出: 枚举值 JSON（缺省 <输入名>_enum_values.json）+ stdout JSON 摘要；
       ``--template`` 另产映射表模板 ``enumvalues_{时间戳}.xlsx``
       （Sheet 名=字段、三列，orgValue 与 EQUAL 预填、mappingValue 留空），
       供整理映射对后直接走填充入口。
@@ -99,7 +99,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--output", "-o", default=None,
-        help="枚举值 JSON 输出路径（缺省 <输入名>.enum_values.json）",
+        help="枚举值 JSON 输出路径（缺省 <输入名>_enum_values.json）",
     )
     parser.add_argument(
         "--template", action="store_true",
@@ -122,7 +122,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     output = (
         Path(args.output)
         if args.output
-        else input_path.with_name(input_path.stem + ".enum_values.json")
+        else input_path.with_name(input_path.stem + "_enum_values.json")
     )
 
     report = build_enum_values(
