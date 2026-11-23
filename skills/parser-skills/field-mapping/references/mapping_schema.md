@@ -140,10 +140,10 @@
 
 | 错误码 | 触发 |
 |---|---|
-| `invalid_input` | 无 --set/--clear；set 规格不符 `字段=标准字段名`；clear 空名单；同批目标重复或 set/clear 重叠；标准字段名命中黑名单四字段（报错指引专属链路）；标准字段名不在目录内；set 命中条目已带值映射（提示先取消值映射再改判） |
+| `invalid_input` | 无 --set/--clear；set 规格不符 `字段=标准字段名`；clear 空名单；同批目标重复；同批命中重叠（**按命中条目判定**——经原始字段名与标准字段名双重寻址指向同一条目，set 间或 set/clear 间均拒绝）；标准字段名命中黑名单四字段（报错指引专属链路）；标准字段名不在目录内；set 命中条目已带值映射（提示先取消值映射再改判） |
 | `rule_name_not_found` / `event_annotation_required` | `--target` 未知名 / `--group` 无事件标注（复用范围解析底座） |
 | `field_not_found` | 目标在作用域内无同名 index/field 条目（附「原始名(标准名)」词汇表） |
-| `field_name_ambiguous` | 标准字段名只经 field 命中且对应 ≥2 个原始字段（列出候选，改用原始字段名） |
+| `field_name_ambiguous` | 标准字段名只经 field 命中且对应 ≥2 个原始字段（列出候选，改用原始字段名）；或 set 目标同时经 index 与 field 命中多个不同原始字段（混命中，改用唯一确定的原始字段名） |
 | `reserved_field_rejected` | 目标命中排除索引（original_log/日志类型/事件名称/事件级别——审计锚点/链路持有字段） |
 | `mapping_target_occupied` | 一对一占用不变量：目标标准字段已被其他原始字段占用（报错指明占用者；占用按调整前状态评估，同批 clear 不解锁，同批多目标指向同一标准字段亦拒绝） |
 | `mapping_not_found` | clear 目标命中的全部条目都无可清归属标注（禁止静默成功） |

@@ -287,6 +287,60 @@ class MappingAdjustCliTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(payload["code"], "invalid_input")
 
+    def test_set_and_clear_entry_overlap_rejected(self):
+        # 双侧寻址绕过字符串判重：index 与标准字段名指向同一条目 → 按命中条目拒绝
+        config = self._config(
+            [
+                make_entity(
+                    entries=[
+                        make_entry("src_ip", field="源地址", entity="流量", sim=True, core=False)
+                    ]
+                )
+            ]
+        )
+        code, payload = self._run(
+            "--input", str(config), "--set", "src_ip=目的地址", "--clear", "源地址",
+        )
+        self.assertEqual(code, 1)
+        self.assertEqual(payload["code"], "invalid_input")
+        self.assertEqual(list(self._tmp.glob("*_adjusted.json")), [])
+
+    def test_set_specs_entry_overlap_rejected(self):
+        # 两个 set 目标经不同寻址方式命中同一条目 → 拒绝（后写覆盖先写）
+        config = self._config(
+            [
+                make_entity(
+                    entries=[
+                        make_entry("src_ip", field="源地址", entity="流量", sim=True, core=False)
+                    ]
+                )
+            ]
+        )
+        code, payload = self._run(
+            "--input", str(config),
+            "--set", "src_ip=目的地址", "--set", "源地址=事件结果",
+        )
+        self.assertEqual(code, 1)
+        self.assertEqual(payload["code"], "invalid_input")
+
+    def test_set_mixed_index_field_hits_rejected(self):
+        # 目标名既是某条目 index 又是另一条目 field：命中多个原始字段 → 歧义拒绝
+        # （否则占用按自身判非冲突，写回后两个原始字段同持一个标准字段）
+        config = self._config(
+            [
+                make_entity(
+                    entries=[
+                        make_entry("源地址"),
+                        make_entry("client_ip", field="源地址", entity="流量", sim=True, core=False),
+                    ]
+                )
+            ]
+        )
+        code, payload = self._run("--input", str(config), "--set", "源地址=目的地址")
+        self.assertEqual(code, 1)
+        self.assertEqual(payload["code"], "field_name_ambiguous")
+        self.assertIn("client_ip", payload["message"])
+
     def test_set_standard_name_ambiguous_rejected(self):
         config = self._config(
             [

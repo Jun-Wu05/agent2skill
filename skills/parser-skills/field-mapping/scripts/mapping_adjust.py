@@ -58,7 +58,7 @@ import copy
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 _SKILLS_ROOT = Path(__file__).resolve().parents[2]
 if str(_SKILLS_ROOT) not in sys.path:
@@ -123,17 +123,24 @@ def parse_set_specs(raw_values: List[str]) -> List[Tuple[str, str]]:
     return specs
 
 
+def _entry_index(entry: Mapping) -> str:
+    """条目 index 归一化（None/非串 → 空串、去空白）。"""
+    return str(entry.get("index") or "").strip()
+
+
+def _entry_field(entry: Mapping) -> str:
+    """条目归属标注 field 归一化（None/非串 → 空串、去空白）。"""
+    return str(entry.get("field") or "").strip()
+
+
 def _distinct_hit_index(entries: List[dict]) -> Optional[str]:
     """目标命中条目的唯一原始字段名；多个不同原始字段返回 None。
 
     仅经标准字段名命中且对应多个原始字段时由歧义守卫拒绝；
     经 index 命中的目标天然只有一个原始字段名。
     """
-    indexes = {
-        str(entry.get("index") or "").strip()
-        for _owner, entry in entries
-        if str(entry.get("index") or "").strip()
-    }
+    indexes = {_entry_index(entry) for _owner, entry in entries}
+    indexes.discard("")
     if len(indexes) == 1:
         return next(iter(indexes))
     return None
@@ -237,9 +244,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         field_only = [
             entry
             for _owner, entry in matches[field]
-            if str(entry.get("index") or "").strip() and entry.get("index") != field
+            if _entry_index(entry) and entry.get("index") != field
         ]
-        distinct_indexes = {str(entry.get("index")) for entry in field_only}
+        distinct_indexes = {_entry_index(entry) for entry in field_only}
         if len(distinct_indexes) >= 2:
             candidates: List[str] = []
             for entry in field_only:
@@ -253,6 +260,46 @@ def main(argv: Optional[List[str]] = None) -> int:
                 + "。请改用其中的原始字段名",
             )
 
+    # ---- set 目标唯一原始字段守卫：index 与标准字段名混命中 → 歧义拒绝 ----
+    # 目标名既是某条目的原始字段名、又是其他条目的标准字段名时，命中跨多个
+    # 原始字段：占用会按自身误判非冲突、写回后多个原始字段同持一个标准字段
+    # ——一律拒绝，请改用唯一确定的原始字段名。
+    for field, _standard_name in set_specs:
+        hit_indexes = {_entry_index(entry) for _owner, entry in matches[field]}
+        hit_indexes.discard("")
+        if len(hit_indexes) > 1:
+            return _print_error(
+                "field_name_ambiguous",
+                f"set 目标「{field}」命中多个不同原始字段"
+                + f"（{'、'.join(sorted(hit_indexes))}）；"
+                "目标名既匹配原始字段名又匹配标准字段名，请改用唯一确定的原始字段名",
+            )
+
+    # ---- 同批命中重叠守卫（按命中条目判定，非目标字符串）----
+    # 双侧寻址（index 与标准字段名）可指向同一条目：字符串判重拦不住，
+    # 后写会覆盖先写（如 set 写入后被 clear 置空还双双报成功）——按条目
+    # 身份判重叠，命中交集非空即拒绝。
+    def _hit_ids(field: str) -> set:
+        return {id(entry) for _owner, entry in matches[field]}
+
+    set_hit_ids = {field: _hit_ids(field) for field, _standard_name in set_specs}
+    clear_hit_ids = {field: _hit_ids(field) for field in clear_fields}
+    for i, (field_a, _standard_a) in enumerate(set_specs):
+        for field_b, _standard_b in set_specs[i + 1 :]:
+            if set_hit_ids[field_a] & set_hit_ids[field_b]:
+                return _print_error(
+                    "invalid_input",
+                    f"set 目标「{field_a}」与「{field_b}」命中同一条目"
+                    "（经原始字段名与标准字段名双重寻址）；请明确单一目标",
+                )
+        for field_c in clear_fields:
+            if set_hit_ids[field_a] & clear_hit_ids[field_c]:
+                return _print_error(
+                    "invalid_input",
+                    f"set 目标「{field_a}」与 clear 目标「{field_c}」命中同一条目"
+                    "（经原始字段名与标准字段名双重寻址）；同一命令内不可既设置又清除",
+                )
+
     # ---- 目录加载（set 需要目录解析）----
     catalog = None
     if set_specs:
@@ -264,9 +311,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     # ---- 排除索引守卫（set 与 clear 同规：审计锚点/链路持有字段不动）----
     for field in all_fields:
         excluded_hits = {
-            str(entry.get("index"))
+            _entry_index(entry)
             for _owner, entry in matches[field]
-            if entry.get("index") in MAPPING_EXCLUDED_INDICES
+            if _entry_index(entry) in MAPPING_EXCLUDED_INDICES
         }
         if excluded_hits:
             return _print_error(
@@ -331,9 +378,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # ---- clear 守卫：无可清标注 → 禁止静默成功 ----
     for field in clear_fields:
-        if not any(
-            str(entry.get("field") or "").strip() for _owner, entry in matches[field]
-        ):
+        if not any(_entry_field(entry) for _owner, entry in matches[field]):
             return _print_error(
                 "mapping_not_found",
                 f"目标字段「{field}」没有可清除的归属映射标注"
@@ -347,7 +392,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         changed = unchanged = 0
         previous: List[str] = []
         for _owner, entry in matches[field]:
-            old_field = str(entry.get("field") or "").strip()
+            old_field = _entry_field(entry)
             if old_field and old_field not in previous:
                 previous.append(old_field)
             old_state = (
@@ -382,7 +427,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         cleared = skipped = 0
         previous: List[str] = []
         for _owner, entry in matches[field]:
-            old_field = str(entry.get("field") or "").strip()
+            old_field = _entry_field(entry)
             if old_field:
                 if old_field not in previous:
                     previous.append(old_field)
