@@ -24,6 +24,7 @@ DOWNLOAD_NAME_TEMPLATES: dict[str, str] = {
     "enummapping_config": "enummapping_config_{timestamp}.txt",
     "enumvalues_table": "enumvalues_{timestamp}.xlsx",
     "threatmapping_config": "threatmapping_config_{timestamp}.txt",
+    "mappingadjusted_config": "mappingadjusted_config_{timestamp}.txt",
 }
 
 _TIMESTAMP_FORMAT = "%Y%m%d_%H%M"

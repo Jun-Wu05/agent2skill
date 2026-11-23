@@ -18,7 +18,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Mapping, MutableMapping, Optional
 
 from .candidate_retrieval import CandidateRetriever
 from .standard_catalog import (
@@ -115,6 +115,25 @@ def collect_expected_fields(rules: List[Mapping]) -> List[str]:
 def _canonical_entity(record: StandardField) -> str:
     """目录记录「对象」列首个对象（多值逗号分隔）。"""
     return record.objects.split(",")[0].strip()
+
+
+def write_attribution(entry: MutableMapping, record: Optional[StandardField]) -> None:
+    """写归属四件 field/entity/sim/core（record 为 None 时整体置空）。
+
+    归属写回的单一事实源：子规则写回（匹配写标准元数据、未匹配清空）
+    与手动调整（设置写四件、清除置空四件）共用；配置写回只在
+    record 非 None 时调用（既有映射保留语义由调用方保证）。
+    """
+    if record is not None:
+        entry["field"] = record.system_property_name
+        entry["entity"] = _canonical_entity(record)
+        entry["sim"] = True
+        entry["core"] = False
+    else:
+        entry["field"] = None
+        entry["entity"] = None
+        entry["sim"] = None
+        entry["core"] = None
 
 
 def _candidate_score(
@@ -297,16 +316,7 @@ def apply_decisions_to_subrules(
             if index not in decisions:
                 continue
             record = decisions[index]
-            if record is not None:
-                entry["field"] = record.system_property_name
-                entry["entity"] = _canonical_entity(record)
-                entry["sim"] = True
-                entry["core"] = False
-            else:
-                entry["field"] = None
-                entry["entity"] = None
-                entry["sim"] = None
-                entry["core"] = None
+            write_attribution(entry, record)
     return result
 
 
@@ -336,10 +346,7 @@ def apply_decisions_to_config(
                         continue
                     record = decisions.get(index)
                     if record is not None:
-                        entry["field"] = record.system_property_name
-                        entry["entity"] = _canonical_entity(record)
-                        entry["sim"] = True
-                        entry["core"] = False
+                        write_attribution(entry, record)
             for value in obj.values():
                 _apply(value)
         elif isinstance(obj, list):
