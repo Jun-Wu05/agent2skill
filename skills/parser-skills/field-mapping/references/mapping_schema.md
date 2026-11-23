@@ -1,6 +1,6 @@
 # field-mapping JSON 契约
 
-四个契约文件 + stdout 摘要的字段说明。脚本对缺失可选字段的容忍度：mappings.json 的 `standard` 缺省视为「未匹配」；其余输入文件字段由脚本严格校验。
+五个契约文件 + stdout 摘要的字段说明。脚本对缺失可选字段的容忍度：mappings.json 的 `standard` 缺省视为「未匹配」；其余输入文件字段由脚本严格校验。
 
 ## 1. candidates.json（脚本①产物，判定输入）
 
@@ -101,3 +101,49 @@
 | `output` / `export` | 结果 JSON 与 Base64 导出路径；白板路径另有 `entry_output` / `entry_export` |
 
 **错误码**：`config_required`（规则文件缺失）/ `input_required`（判定/分类文件缺失）/ `invalid_config`（规则文件非数组）/ `invalid_input`（路径互斥缺失、契约不符、日志头+KV 缺 feature_identifier、厂商/产品缺失）。全部已映射时成功跳过（空候选单 / 零匹配产物照常输出），不报错。
+
+## 6. 手动调整契约（mapping_adjust.py）
+
+**CLI**：`--input`（必填）；`--set 字段=标准字段名`（可重复）；`--clear 字段,...`（逗号分隔）；`--target` / `--group`（作用域收窄，target 优先）；`--output`；`--no-export`。`--set` 与 `--clear` 至少给一个，同批目标不得重复、不得重叠。
+
+**目标寻址**：原始字段名（index）或标准字段名（field）同名命中；缺省作用域内全部命中条目一并调整（同名字段跨子规则共享一次调整）。
+
+**`<输入名>_adjusted.json`**——原配置数组（深拷贝改写）：
+
+- set 命中条目：`field`=目录规范名、`entity`=目录首个对象、`sim`=true、`core`=false（四件与收口写回同一来源）
+- clear 命中条目：`field`/`entity`/`sim`/`core` 置 null；条目本身与 `mappings` 原样保留——与取消值映射（置空 mappings、标注保留）镜像对称
+- 排除索引（original_log/日志类型/事件名称/事件级别）条目不动（set/clear 均拒绝）；未命中的条目不动
+
+**stdout 摘要**：
+
+```json
+{
+  "status": "success",
+  "message": "已设置 1 个条目的归属映射（src_ip→源地址）；已清除 2 个条目的归属映射标注（dst_ip，值映射保留）",
+  "output": "...", "export": "...",
+  "sets": [
+    {"field": "src_ip", "standard": "源地址", "changed": 1, "unchanged": 0, "previous_values": ["目的地址"]}
+  ],
+  "clears": [
+    {"field": "dst_ip", "cleared": 2, "skipped": 0, "previous_values": ["目的地址"]}
+  ]
+}
+```
+
+| 字段 | 说明 |
+|---|---|
+| `sets[].changed` / `unchanged` | 归属四件实际变化 / 已是目标值的条目数（set 同值幂等成功计 unchanged） |
+| `clears[].cleared` / `skipped` | 清除标注 / 本无可清的命中条目数（全部无可清则整单拒绝） |
+| `previous_values` | 命中条目的旧归属名清单（去重保序；全空为 `[]`） |
+
+**守卫链（任一命中整单拒绝，一行不写；手动输入显式失败不降级）**：
+
+| 错误码 | 触发 |
+|---|---|
+| `invalid_input` | 无 --set/--clear；set 规格不符 `字段=标准字段名`；clear 空名单；同批目标重复或 set/clear 重叠；标准字段名命中黑名单四字段（报错指引专属链路）；标准字段名不在目录内；set 命中条目已带值映射（提示先取消值映射再改判） |
+| `rule_name_not_found` / `event_annotation_required` | `--target` 未知名 / `--group` 无事件标注（复用范围解析底座） |
+| `field_not_found` | 目标在作用域内无同名 index/field 条目（附「原始名(标准名)」词汇表） |
+| `field_name_ambiguous` | 标准字段名只经 field 命中且对应 ≥2 个原始字段（列出候选，改用原始字段名） |
+| `reserved_field_rejected` | 目标命中排除索引（original_log/日志类型/事件名称/事件级别——审计锚点/链路持有字段） |
+| `mapping_target_occupied` | 一对一占用不变量：目标标准字段已被其他原始字段占用（报错指明占用者；占用按调整前状态评估，同批 clear 不解锁，同批多目标指向同一标准字段亦拒绝） |
+| `mapping_not_found` | clear 目标命中的全部条目都无可清归属标注（禁止静默成功） |
