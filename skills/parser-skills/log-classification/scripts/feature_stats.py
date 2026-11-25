@@ -15,7 +15,7 @@ CLI 用法:
                             [--output <统计报告.json>]
 
 输入: Excel 数据表（须含「原始日志」列）
-输出: 统计报告 JSON（缺省 <输入名>.stats.json）+ stdout JSON 摘要
+输出: 统计报告 JSON（缺省 <输入名>_stats.json）+ stdout JSON 摘要
 
 数据裁决（全部确定性，逐项记入报告 adjudications 字段供宿主 agent 核对）:
 - 声称 kv 分隔符零匹配且字段分隔符为空白时，对称重试另一种键值分隔符；
@@ -227,7 +227,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--output", "-o", default=None,
-        help="统计报告 JSON 输出路径（缺省 <输入名>.stats.json）",
+        help="统计报告 JSON 输出路径（缺省 <输入名>_stats.json）",
     )
     args = parser.parse_args(argv)
 
@@ -246,7 +246,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     output = (
         Path(args.output)
         if args.output
-        else input_path.with_name(input_path.stem + ".stats.json")
+        else input_path.with_name(input_path.stem + "_stats.json")
     )
 
     report = build_stats_report(

@@ -10,10 +10,11 @@
 - 用户要求「字段映射 / 映射到标准字段 / 把 X 映射到 Y / 填白板 / 生成完整（可导入的）解析规则」
 - 上一步做过日志类型提取（白板子规则已产出），继续把字段填完
 - 用户上传现成配置，要求补齐其中未映射的字段（配置路径）
+- 用户要求「改判 / 把 X 改映射为 Y / 清除 X 的字段映射（归属标注）」（手动调整，见下文专节）
 
 ## 前置条件
 
-- **白板路径**：日志类型提取产物 `<输入名>.subrules.json` + `<输入名>.classified.json`（见其 guide 第 5 步）；向用户问清**数据源厂商与产品**（入口规则必填，缺失整单拒绝）
+- **白板路径**：日志类型提取产物 `<输入名>_subrules.json` + `<输入名>_classified.json`（见其 guide 第 5 步）；向用户问清**数据源厂商与产品**（入口规则必填，缺失整单拒绝）
 - **配置路径**：配置族文件（Base64 txt / 原生 JSON / TXT，规则数组）
 - 标准字段目录（625 条）与同义词/标签资产随技能仓库提供，脚本自动定位，无需用户输入
 
@@ -29,10 +30,10 @@
 
 ```bash
 python <parser-skills>/field-mapping/scripts/mapping_candidates.py \
-  --subrules <输入名>.subrules.json [--excel <日志表.xlsx>]
+  --subrules <输入名>_subrules.json [--excel <日志表.xlsx>]
 ```
 
-产出 `<输入名>.subrules.candidates.json`：每个待映射字段的 Top-10 候选（附分数/英文名/对象/类型/描述/枚举白名单）+ 值画像（`--excel` 给了用全量日志，否则用白板自带样本）+ 枚举短路标记。
+产出 `<输入名>_subrules_candidates.json`：每个待映射字段的 Top-10 候选（附分数/英文名/对象/类型/描述/枚举白名单）+ 值画像（`--excel` 给了用全量日志，否则用白板自带样本）+ 枚举短路标记。
 
 **完成判据**：stdout `status: success`；`field_count` 与白板字段数一致。全部已映射或属排除索引时**成功跳过**（空候选单、`field_count: 0`）——如实告知用户即可。
 
@@ -70,7 +71,7 @@ python <parser-skills>/field-mapping/scripts/mapping_candidates.py \
 
 ```bash
 python <parser-skills>/field-mapping/scripts/mapping_finalize.py \
-  --subrules <输入名>.subrules.json --classified <输入名>.classified.json \
+  --subrules <输入名>_subrules.json --classified <输入名>_classified.json \
   --mappings mappings.json --vendor <厂商> --product <产品>
 ```
 
@@ -78,8 +79,8 @@ python <parser-skills>/field-mapping/scripts/mapping_finalize.py \
 
 | 产物 | 文件 | 用途 |
 |---|---|---|
-| 映射后子规则 | `<输入名>.mapped_subrules.json` | 字段映射 + 事件标注写回的子规则 |
-| 入口规则 | `<输入名>.entry_rules.json` | 按 logtype 路由到子规则的总闸（本身不含映射） |
+| 映射后子规则 | `<输入名>_mapped_subrules.json` | 字段映射 + 事件标注写回的子规则 |
+| 入口规则 | `<输入名>_entry_rules.json` | 按 logtype 路由到子规则的总闸（本身不含映射） |
 | Base64 导出 | `mappedconfig_subrules_YYYYMMDD_HHMM.txt` + `mappedconfig_mainrules_YYYYMMDD_HHMM.txt` | 平台可导入（`--no-export` 跳过） |
 
 **完成判据**：stdout `status: success`。
@@ -96,7 +97,29 @@ python <parser-skills>/field-mapping/scripts/mapping_finalize.py \
 2. 同白板路径第 3 步写 mappings.json（**只写 mappings 段，无 events**——配置路径不做事件标注）
 3. `python <parser-skills>/field-mapping/scripts/mapping_finalize.py --config <配置文件> --mappings mappings.json`
 
-产物：`<输入名>.mapped_config.json` + `fieldmapped_config_YYYYMMDD_HHMM.txt`。既有映射（field 非空的条目）原样保留且在占用裁决中恒赢。
+产物：`<输入名>_mapped_config.json` + `fieldmapped_config_YYYYMMDD_HHMM.txt`。既有映射（field 非空的条目）原样保留且在占用裁决中恒赢。
+
+## 手动调整（改判 / 清除归属映射）
+
+收口之后用户对个别字段的归属判定不满意时，用 `mapping_adjust.py` 手动修正：**--set** 把目标字段的归属改成指定标准字段，**--clear** 清除目标的归属标注。只动归属四件（field/entity/sim/core），不触碰值映射——与枚举子模块的取消映射（置空 mappings、标注保留）镜像对称，两者组合可达全清。
+
+```bash
+python <parser-skills>/field-mapping/scripts/mapping_adjust.py \
+  --input <配置文件> [--set "src_ip=源地址"]... [--clear "dst_ip,old"] \
+  [--target <子规则,...>] [--group all|threat|non-threat] [--no-export]
+```
+
+产物：`<输入名>_adjusted.json` + Base64 导出 `mappingadjusted_config_{时间戳}.txt`。stdout 摘要含 sets/clears 逐目标明细（changed/unchanged/cleared/skipped 与 previous_values 旧值清单），逐项核对。
+
+操作要点：
+
+- **目标双侧寻址**：原始字段名（index）或标准字段名（field）同名命中均可——「把 源地址 改成 目的地址」能直接命中 `index=src_ip, field=src_address` 的行；标准字段名对应多个原始字段、或目标名同时经原始字段名与标准字段名命中不同条目时，报错要求改用唯一确定的原始字段名；同一命令内多个目标命中同一条目（双重寻址指向同一行）会被拒绝
+- **标准字段名中英文均可**（目录四路索引互通），**写回统一为目录字段名（英文别名，平台原生形态）**——你判中文名、配置里存英文名、写回英文名，是同一标准的两个名字；占用比对前经目录归一，英文形态的既有映射同样拦得住；黑名单四字段（事件名称/事件级别/日志类型/威胁类型）由专属链路持有，中英文名均拦，报错会指路
+- **占用冲突是拒绝不是抢占**：目标标准字段已被其他原始字段占用时报错指明占用者，先清除占用者或换目标（分两步各原子跑；同一命令内的清除不会解锁占用）
+- **带值映射的条目先清值再改判**：报错提示先跑枚举子模块的取消映射——旧值映射属旧标准字段的枚举，留着必错配
+- **缺省全局生效**：同名字段跨全部子规则一并调整；`--target`/`--group` 可收窄到指定子规则
+- **幂等**：set 同值重跑成功计 unchanged；clear 落空报错（防寻址写错被静默掩盖）
+- 排除索引（original_log/日志类型/事件名称/事件级别）为审计锚点/链路持有字段，set 与 clear 均拒绝；威胁链路写入的归属标注允许手工清除（随时重跑链路恢复）
 
 ## 约束与边界
 
@@ -110,11 +133,13 @@ python <parser-skills>/field-mapping/scripts/mapping_finalize.py \
 - 配置路径不做事件标注、不生成入口规则（配置自身已有路由结构）
 - 操作类型字段（登录/审计等 7 类的细分）不在本版——事件标注只写事件名称+事件级别
 - 枚举字段的**值映射**（如 `GET→成功`）是 enum-mapping 子模块的范围，本流程只判字段归属
-- 手动调整已有映射（改判单个字段、清除映射）是独立子命令，另立票据交付
+- 手动调整已有映射（改判单个字段、清除归属标注）用本模块的 `mapping_adjust.py`（见上）；移除整个字段是 field-adjust 的 delete，清值映射是 enum-mapping 的取消映射，三者不可互换
 - 产物同名直接覆盖；不原地覆盖输入文件
 
-**完整 JSON 契约**（candidates.json / mappings.json / 两路径产物 / stdout 摘要的字段说明）见 [references/mapping_schema.md](references/mapping_schema.md)。
+**完整 JSON 契约**（candidates.json / mappings.json / 两路径产物 / 手动调整产物 / stdout 摘要的字段说明）见 [references/mapping_schema.md](references/mapping_schema.md)。
 
 ## 错误码
 
-`config_required`（规则文件缺失）/ `input_required`（判定/分类文件缺失）/ `invalid_config`（规则文件非数组）/ `invalid_input`（路径参数互斥缺失、mappings 契约不符、分类结果非对象、日志头+KV 缺正则、厂商/产品缺失），失败退出码 1，stdout JSON 报告。全部已映射时**不报错**——成功跳过（见各流程步）。
+`config_required`（规则文件缺失）/ `input_required`（判定/分类文件缺失）/ `invalid_config`（规则文件非数组）/ `invalid_input`（路径参数互斥缺失、mappings 契约不符、分类结果非对象、日志头+KV 缺正则、厂商/产品缺失；手动调整另有：无 --set/--clear、set 规格不符、同批目标重复、黑名单四字段、目录外标准字段名、带值映射改判），失败退出码 1，stdout JSON 报告。全部已映射时**不报错**——成功跳过（见各流程步）。
+
+手动调整专项错误码：`mapping_target_occupied`（目标标准字段已被其他原始字段占用，报错指明占用者；占用按调整前状态评估）、`field_not_found`（目标在作用域内无同名 index/field 条目，附词汇表）、`field_name_ambiguous`（标准字段名对应多个原始字段）、`reserved_field_rejected`（目标命中排除索引：original_log/日志类型/事件名称/事件级别）、`mapping_not_found`（clear 落空无可清标注）。

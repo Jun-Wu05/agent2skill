@@ -248,6 +248,25 @@ class ExistingOccupantsTest(unittest.TestCase):
         occupants = collect_existing_occupants(entities)
         self.assertEqual(occupants, {"源地址": "src_ip", "源用户名": "user"})
 
+    def test_catalog_normalizes_alias_keys(self):
+        # 占用键经目录归一：英文别名 host_name → 规范名 主机名称；
+        # 目录外的外部映射名保留原文
+        entities = [
+            {
+                "name": "a",
+                "normalize": [
+                    _entry("computerName", field="host_name"),
+                    _entry("src_ip", field="外部映射名"),
+                ],
+            },
+        ]
+        occupants = collect_existing_occupants(entities, self.catalog)
+        self.assertEqual(occupants, {"主机名称": "computerName", "外部映射名": "src_ip"})
+
+    @classmethod
+    def setUpClass(cls):
+        cls.catalog = standard_catalog.load_catalog()
+
 
 class ApplyToSubrulesTest(unittest.TestCase):
     @classmethod
@@ -271,7 +290,7 @@ class ApplyToSubrulesTest(unittest.TestCase):
         decisions = {"dst_ip": record, "user": None}
         updated = apply_decisions_to_subrules(rules, decisions, self.catalog)
         dst = updated[0]["normalize"][0]
-        self.assertEqual(dst["field"], "目的地址")
+        self.assertEqual(dst["field"], "dst_address")
         self.assertEqual(dst["entity"], "流量,登录".split(",")[0])  # 目录首个对象
         self.assertTrue(dst["sim"])
         self.assertFalse(dst["core"])
@@ -310,7 +329,7 @@ class ApplyToConfigTest(unittest.TestCase):
         ]
         decisions = {"dst_ip": record, "src_ip": record}
         updated = apply_decisions_to_config(config, decisions, self.catalog)
-        self.assertEqual(updated[0]["normalize"][0]["field"], "目的地址")
+        self.assertEqual(updated[0]["normalize"][0]["field"], "dst_address")
         # 既有映射保留不动
         self.assertEqual(updated[0]["normalize"][1]["field"], "外部映射名")
         self.assertIsNone(config[0]["normalize"][0]["field"])

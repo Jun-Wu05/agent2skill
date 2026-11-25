@@ -2,7 +2,7 @@
 
 接缝：enum-mapping/scripts/enum_unmap.py 的 main(argv)——
 stdout JSON（status/message/output/export/fields 或
-status/error/code/message）+ <输入名>.enumunmapped.json 产物 +
+status/error/code/message）+ <输入名>_enumunmapped.json 产物 +
 enummapping_config Base64 导出 + 退出码。
 取消映射 = 置空 normalize[].mappings（条目与 field 标注保留），
 与删除字段（field-adjust）语义分离；守卫链见脚本 docstring。
@@ -92,7 +92,7 @@ class EnumUnmapCliTest(unittest.TestCase):
         code, payload = self._run("--input", str(config), "--fields", "event_type")
         self.assertEqual(code, 0)
         self.assertEqual(payload["status"], "success")
-        self.assertTrue(payload["output"].endswith(".enumunmapped.json"))
+        self.assertTrue(payload["output"].endswith("_enumunmapped.json"))
         result = self._read_output(payload)
         entry = result[0]["normalize"][0]
         self.assertEqual(entry["mappings"], [])
@@ -162,7 +162,7 @@ class EnumUnmapCliTest(unittest.TestCase):
         self.assertIn("etype1", payload["message"])
         self.assertIn("etype2", payload["message"])
         # 整单拒绝：不产出文件
-        self.assertEqual(list(self._tmp.glob("*.enumunmapped.json")), [])
+        self.assertEqual(list(self._tmp.glob("*_enumunmapped.json")), [])
 
     def test_no_mappings_rejects_no_silent_success(self):
         config = self._config([make_entity(entries=[make_entry("event_type", mappings=[])])])
@@ -186,7 +186,7 @@ class EnumUnmapCliTest(unittest.TestCase):
         )
         self.assertEqual(code, 1)
         self.assertEqual(payload["code"], "mapping_not_found")
-        self.assertEqual(list(self._tmp.glob("*.enumunmapped.json")), [])
+        self.assertEqual(list(self._tmp.glob("*_enumunmapped.json")), [])
 
     def test_empty_fields_list_rejected(self):
         config = self._config([make_entity(entries=[make_entry("event_type", mappings=[MAPPING])])])

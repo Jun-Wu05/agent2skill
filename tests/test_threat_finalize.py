@@ -2,7 +2,7 @@
 
 接缝：threat-type/scripts/threat_finalize.py 的 main(argv)——
 stdout JSON（status/message/output/export/groups/skipped_rules 或
-status/error/code/message）+ <输入名>.threatfilled.json 产物 +
+status/error/code/message）+ <输入名>_threatfilled.json 产物 +
 threatmapping_config Base64 导出 + 退出码。守卫链与三态写回语义见脚本
 docstring（设计裁决 #4 票面 2026-11-23）；夹具为合成 entities、工作单
 与分组判定 JSON。

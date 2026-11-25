@@ -2,7 +2,7 @@
 
 接缝：enum-mapping/scripts/enum_fill.py 的 main(argv)——
 stdout JSON（status/message/output/export/fields/unbound 或
-status/error/code/message）+ <输入名>.enumfilled.json 产物 +
+status/error/code/message）+ <输入名>_enumfilled.json 产物 +
 enummapping_config Base64 导出 + 退出码。
 守卫链与写回语义见脚本 docstring；夹具为合成 entities JSON 与 xlsx。
 """
@@ -320,7 +320,7 @@ class EnumFillCliTest(unittest.TestCase):
         self.assertIn("no_such_field", payload["message"])
         self.assertIn("event_type", payload["message"])  # 可用字段提示
         # 整单拒绝：不产出任何文件
-        outputs = list(self._tmp.glob("*.enumfilled.json"))
+        outputs = list(self._tmp.glob("*_enumfilled.json"))
         self.assertEqual(outputs, [])
 
     def test_chain_held_field_fill_allowed(self):

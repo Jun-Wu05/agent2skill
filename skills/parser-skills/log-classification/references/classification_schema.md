@@ -2,7 +2,7 @@
 
 阶段①（feature_stats.py）与阶段②（classify_finalize.py）之间、以及下游 field-mapping 消费的全部文件契约。字段名是稳定接口，改名即破坏衔接。
 
-## stats.json（阶段①产物，`<输入名>.stats.json`）
+## stats.json（阶段①产物，`<输入名>_stats.json`）
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
@@ -26,7 +26,7 @@
 
 裸数组形态同样接受。`logtype` 必须严格等于 stats 中的特征值（臆造被裁剪、遗漏被回填，结果记入分类结果的 `sanitized` 字段）。
 
-## classified.json（阶段②产物，`<输入名>.classified.json`）
+## classified.json（阶段②产物，`<输入名>_classified.json`）
 
 平台兼容 schema：
 
@@ -44,7 +44,7 @@
 | `sanitized` | {trimmed, backfilled}——集合对齐记录 |
 | `input` / `sheet` | 源文件与工作表名 |
 
-## subrules.json（阶段②产物，`<输入名>.subrules.json`）
+## subrules.json（阶段②产物，`<输入名>_subrules.json`）
 
 mapping entities 数组，每特征值一条白板子规则：
 

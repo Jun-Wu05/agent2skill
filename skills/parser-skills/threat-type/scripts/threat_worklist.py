@@ -23,7 +23,7 @@ CLI 用法:
 
 输入: 配置族文件（Base64 txt / 原生 JSON / TXT，规则数组）+
       日志数据表 Excel（须含「原始日志」列）。
-输出: 工作单 JSON（缺省 <输入名>.threat_worklist.json）+ stdout JSON 摘要。
+输出: 工作单 JSON（缺省 <输入名>_threat_worklist.json）+ stdout JSON 摘要。
 
 守卫链:
 - 无任何事件标注的子规则 → ``event_annotation_required``；
@@ -152,7 +152,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--output", "-o", default=None,
-        help="工作单 JSON 输出路径（缺省 <输入名>.threat_worklist.json）",
+        help="工作单 JSON 输出路径（缺省 <输入名>_threat_worklist.json）",
     )
     args = parser.parse_args(argv)
 
@@ -204,7 +204,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     output = (
         Path(args.output)
         if args.output
-        else input_path.with_name(input_path.stem + ".threat_worklist.json")
+        else input_path.with_name(input_path.stem + "_threat_worklist.json")
     )
     worklist: Dict[str, Any] = {
         "input": str(input_path),

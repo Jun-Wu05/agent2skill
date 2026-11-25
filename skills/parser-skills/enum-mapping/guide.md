@@ -35,7 +35,7 @@ python <parser-skills>/enum-mapping/scripts/enum_extract.py \
   [--header-end-marker <日志头标记>] [--max-values 100] [--template]
 ```
 
-产出 `<输入名>.enum_values.json`：值列表（首现序，`--max-values` 缺省 100 只截列表与样本）、每值计数（全量）、每值首条日志样本、唯一值数、匹配统计。`--template` 另产映射表模板 `enumvalues_{时间戳}.xlsx`（orgValue 与 EQUAL 预填、mappingValue 留空），可直接交给用户或自己补完映射值。
+产出 `<输入名>_enum_values.json`：值列表（首现序，`--max-values` 缺省 100 只截列表与样本）、每值计数（全量）、每值首条日志样本、唯一值数、匹配统计。`--template` 另产映射表模板 `enumvalues_{时间戳}.xlsx`（orgValue 与 EQUAL 预填、mappingValue 留空），可直接交给用户或自己补完映射值。
 
 **完成判据**：stdout `status: success`。零命中报 `enum_extract_empty`——回第 1 步核对格式与分隔符判定。
 
@@ -71,7 +71,7 @@ python <parser-skills>/enum-mapping/scripts/enum_fill.py \
   --input <配置文件> --mappings <映射对.json>      # 或 --excel <映射表.xlsx>
 ```
 
-产出 `<输入名>.enumfilled.json` + Base64 导出 `enummapping_config_{时间戳}.txt`。
+产出 `<输入名>_enumfilled.json` + Base64 导出 `enummapping_config_{时间戳}.txt`。
 
 **完成判据**：stdout `status: success`；核对 `fields` 摘要（added / updated / unchanged / duplicates 与 targets 命中条目数）与 `unbound`（填充时自动解绑的固定值绑定数）是否符合预期。
 
@@ -82,7 +82,7 @@ python <parser-skills>/enum-mapping/scripts/enum_unmap.py \
   --input <配置文件> --fields <字段A,字段B>
 ```
 
-产出 `<输入名>.enumunmapped.json` + 同名 Base64 导出。目标命中的全部条目（index 或 field 同名，含同一原始字段跨多条目）一并置空 `mappings`，条目本身与 field 标注原样保留。
+产出 `<输入名>_enumunmapped.json` + 同名 Base64 导出。目标命中的全部条目（index 或 field 同名，含同一原始字段跨多条目）一并置空 `mappings`，条目本身与 field 标注原样保留。
 
 ## 约束与边界
 

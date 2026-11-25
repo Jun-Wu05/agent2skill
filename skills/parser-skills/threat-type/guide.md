@@ -33,7 +33,7 @@ python <parser-skills>/threat-type/scripts/threat_worklist.py \
   [--header-end-marker <日志头标记>] [--max-values 100]
 ```
 
-产出 `<输入名>.threat_worklist.json`：威胁子规则名单、每条子规则威胁类型字段现状（absent/chain/existing 三态）、每个候选字段的全日志值画像（唯一值数、首现值列表、计数、首条样本、无语义数字代码标记）、威胁类型白名单。
+产出 `<输入名>_threat_worklist.json`：威胁子规则名单、每条子规则威胁类型字段现状（absent/chain/existing 三态）、每个候选字段的全日志值画像（唯一值数、首现值列表、计数、首条样本、无语义数字代码标记）、威胁类型白名单。
 
 **完成判据**：stdout `status: success`。`event_annotation_required`＝配置没有任何事件标注（先做事件标注）；`rule_name_not_found`＝有标注但无威胁组成员。
 
@@ -77,7 +77,7 @@ python <parser-skills>/threat-type/scripts/threat_finalize.py \
   --input <配置文件> --worklist <工作单.json> --judgments <分组判定.json>
 ```
 
-产出 `<输入名>.threatfilled.json` + Base64 导出 `threatmapping_config_{时间戳}.txt`。
+产出 `<输入名>_threatfilled.json` + Base64 导出 `threatmapping_config_{时间戳}.txt`。
 
 **完成判据**：stdout `status: success`；核对 `groups` 摘要（每条子规则的 state / added / updated / unbound）。被拒时按错误信息修正分组判定后重跑（一行都不会写，安全重试）。
 

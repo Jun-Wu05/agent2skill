@@ -62,7 +62,7 @@ python <parser-skills>/log-classification/scripts/feature_stats.py \
   [--field-delimit "||"] [--kv-delimit ":"] [--header-end-marker "<标记>"]
 ```
 
-产出 `<输入名>.stats.json`：每个特征值的计数、样本（≤3 条）、覆盖率、未匹配样本、数据裁决记录。
+产出 `<输入名>_stats.json`：每个特征值的计数、样本（≤3 条）、覆盖率、未匹配样本、数据裁决记录。
 
 **完成判据**：`coverage ≥ 0.8` 且 `value_count` 合理。覆盖率低 → 换特征字段或回第 1 步修参数重跑（同名覆盖）。声称的分隔符错了不用慌：脚本的数据裁决会在零匹配时自动探针改判，改判记录在 `adjudications`，读它核对即可。
 
@@ -83,22 +83,22 @@ python <parser-skills>/log-classification/scripts/feature_stats.py \
 
 ```bash
 python <parser-skills>/log-classification/scripts/classify_finalize.py \
-  --input <日志表.xlsx> --stats <输入名>.stats.json --labels labels.json
+  --input <日志表.xlsx> --stats <输入名>_stats.json --labels labels.json
 ```
 
 产出三份文件（均在输入同目录）：
 
 | 产物 | 文件 | 用途 |
 |---|---|---|
-| 分类结果 | `<输入名>.classified.json` | 平台兼容 schema，含每类型计数/样本/覆盖率 |
-| 白板子规则 | `<输入名>.subrules.json` | 每特征值一条无映射子规则，field-mapping 的输入 |
+| 分类结果 | `<输入名>_classified.json` | 平台兼容 schema，含每类型计数/样本/覆盖率 |
+| 白板子规则 | `<输入名>_subrules.json` | 每特征值一条无映射子规则，field-mapping 的输入 |
 | Base64 导出 | `unmappedconfig_subrules_YYYYMMDD_HHMM.txt` | 平台可导入（`--no-export` 跳过） |
 
 **完成判据**：stdout `status: success`，`sanitized` 无意外项（有的话回第 4 步补标注重跑）。
 
 ## 版本守卫纪律（重新生成前必查）
 
-白板子规则是下游字段映射的基底。**重新跑第 5 步前**，确认下游尚未基于旧分类产出映射结果（`.subrules.json` 衍生的 field-mapping 产物）；已有映射而需要重新分类时，先与用户确认作废范围。
+白板子规则是下游字段映射的基底。**重新跑第 5 步前**，确认下游尚未基于旧分类产出映射结果（`_subrules.json` 衍生的 field-mapping 产物）；已有映射而需要重新分类时，先与用户确认作废范围。
 
 ## 约束与边界
 

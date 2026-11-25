@@ -62,7 +62,7 @@
 
 ## 4. 填充/取消产物
 
-**`<输入名>.enumfilled.json` / `<输入名>.enumunmapped.json`**——原配置数组（深拷贝改写）：
+**`<输入名>_enumfilled.json` / `<输入名>_enumunmapped.json`**——原配置数组（深拷贝改写）：
 
 - 填充：目标条目 `mappings` 按 orgValue 合并更新（同 orgValue 更新 mappingValue/mappingType、新值追加、未提及保留）；条目外层 value/field/sim 等元数据不动；addFields 里目标字段固定值绑定删除（`%{}` 引用保留，清空的 addFields 条目整体移除）
 - 取消：目标条目 `mappings` 置空 `[]`，条目与 field 标注保留

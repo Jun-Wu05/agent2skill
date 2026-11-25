@@ -133,11 +133,11 @@ class WhiteboardPathEndToEndTest(unittest.TestCase):
     def setUp(self):
         self._tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self._tmp, ignore_errors=True)
-        self.subrules = self._tmp / "whiteboard.subrules.json"
+        self.subrules = self._tmp / "whiteboard_subrules.json"
         self.subrules.write_text(
             json.dumps(WHITEBOARD_SUBRULES, ensure_ascii=False), encoding="utf-8"
         )
-        self.classified = self._tmp / "whiteboard.classified.json"
+        self.classified = self._tmp / "whiteboard_classified.json"
         self.classified.write_text(
             json.dumps(_classified(), ensure_ascii=False), encoding="utf-8"
         )
@@ -189,14 +189,14 @@ class WhiteboardPathEndToEndTest(unittest.TestCase):
         )
         login = next(r for r in mapped if r["name"] == "登录_json_子规则")
         by_index = {e["index"]: e for e in login["normalize"]}
-        self.assertEqual(by_index["dst_ip"]["field"], "目的地址")
+        self.assertEqual(by_index["dst_ip"]["field"], "dst_address")
         self.assertTrue(by_index["dst_ip"]["sim"])
         self.assertFalse(by_index["dst_ip"]["core"])
         self.assertTrue(by_index["dst_ip"]["entity"])  # 目录首个对象
-        self.assertEqual(by_index["src_address"]["field"], "源地址")
+        self.assertEqual(by_index["src_address"]["field"], "src_address")
         self.assertIsNone(by_index["src_ip"]["field"])  # 占用冲突败者清空
         self.assertIsNone(by_index["user"]["field"])  # agent 判未匹配清空
-        self.assertEqual(by_index["http_method"]["field"], "HTTP请求方法")  # 枚举短路
+        self.assertEqual(by_index["http_method"]["field"], "http_method")  # 枚举短路（HTTP请求方法的字段名与 index 同形）
         self.assertEqual(by_index["日志类型"]["field"], "log_type")  # 排除索引不动
         self.assertEqual(by_index["original_log"]["field"], "original_log")
         # 事件标注写入（登录事件 → 信息）
@@ -211,8 +211,8 @@ class WhiteboardPathEndToEndTest(unittest.TestCase):
         # block 子规则：全局判定逐子规则写回；无事件判定不写
         block = next(r for r in mapped if r["name"] == "block_json_子规则")
         block_by_index = {e["index"]: e for e in block["normalize"]}
-        self.assertEqual(block_by_index["dst_ip"]["field"], "目的地址")
-        self.assertEqual(block_by_index["http_method"]["field"], "HTTP请求方法")
+        self.assertEqual(block_by_index["dst_ip"]["field"], "dst_address")
+        self.assertEqual(block_by_index["http_method"]["field"], "http_method")
         self.assertEqual(block["parser"]["filter"], [])
 
         # 入口规则
@@ -242,10 +242,10 @@ class WhiteboardPathEndToEndTest(unittest.TestCase):
         self.assertEqual(code, 0)
         payload = json.loads(stdout)
         self.assertEqual(
-            Path(payload["output"]), self._tmp / "whiteboard.mapped_subrules.json"
+            Path(payload["output"]), self._tmp / "whiteboard_mapped_subrules.json"
         )
         self.assertEqual(
-            Path(payload["entry_output"]), self._tmp / "whiteboard.entry_rules.json"
+            Path(payload["entry_output"]), self._tmp / "whiteboard_entry_rules.json"
         )
 
     def test_no_export_flag(self):
@@ -304,11 +304,11 @@ class ConfigPathEndToEndTest(unittest.TestCase):
         self.assertEqual(payload["matched"], 1)
         self.assertEqual(payload["unmatched"], 1)
         self.assertEqual(
-            Path(payload["output"]), self._tmp / "config.mapped_config.json"
+            Path(payload["output"]), self._tmp / "config_mapped_config.json"
         )
         updated = json.loads(Path(payload["output"]).read_text(encoding="utf-8"))
         by_index = {e["index"]: e for e in updated[0]["normalize"]}
-        self.assertEqual(by_index["dst_ip"]["field"], "目的地址")
+        self.assertEqual(by_index["dst_ip"]["field"], "dst_address")
         self.assertTrue(by_index["dst_ip"]["sim"])
         # 未匹配保持原样（field 仍为空），既有映射保留
         self.assertIsNone(by_index["user"]["field"])
@@ -390,7 +390,7 @@ class ErrorContractTest(unittest.TestCase):
 
     def test_b2_missing_vendor_rejected(self):
         subrules = self._write(
-            "w.subrules.json",
+            "w_subrules.json",
             [{"name": "a", "parser": {"name": "json"}, "normalize": [_entry("dst_ip")]}],
         )
         classified = self._write("c.json", _classified())
@@ -406,7 +406,7 @@ class ErrorContractTest(unittest.TestCase):
 
     def test_b2_syslog_kv_without_identifier_rejected(self):
         subrules = self._write(
-            "w.subrules.json",
+            "w_subrules.json",
             [{"name": "a", "parser": {"name": "json"}, "normalize": [_entry("user")]}],
         )
         classification = _classified()

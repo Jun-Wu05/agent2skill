@@ -2,7 +2,7 @@
 
 两个脚本的全部文件契约。字段名即接口，改名即破坏；错误码与守卫语义见 [guide.md](../guide.md)。
 
-## 1. 工作单 JSON（`<输入名>.threat_worklist.json`，threat_worklist.py 产物）
+## 1. 工作单 JSON（`<输入名>_threat_worklist.json`，threat_worklist.py 产物）
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
@@ -55,7 +55,7 @@ stdout 摘要：`status` / `message`（含无取值候选提示；json 格式下
 
 ## 3. 产物（threat_finalize.py）
 
-- `<输入名>.threatfilled.json`：修改后配置（规则数组，与输入同构）
+- `<输入名>_threatfilled.json`：修改后配置（规则数组，与输入同构）
 - `threatmapping_config_{时间戳}.txt`：平台可导入 Base64 导出（`--no-export` 关闭）
 
 写回语义（按子规则三态，原子：全部校验通过才落盘）：

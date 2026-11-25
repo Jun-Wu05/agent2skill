@@ -611,7 +611,7 @@ class CliEndToEndTest(unittest.TestCase):
 
     def test_e2e_extract_on_base64_input(self):
         b64_file = self._b64_copy()
-        output = self._tmp / "out.modified.json"
+        output = self._tmp / "out_modified.json"
         code, stdout = self._run(
             "--input", str(b64_file),
             "--source-field", "original_log",
@@ -654,7 +654,7 @@ class CliEndToEndTest(unittest.TestCase):
         self.assertEqual(decoded, updated)
 
     def test_e2e_auto_naming_from_keyword(self):
-        output = self._tmp / "out.modified.json"
+        output = self._tmp / "out_modified.json"
         code, stdout = self._run(
             "--input", str(self.FIXTURE),
             "--source-field", "original_log",
@@ -680,10 +680,10 @@ class CliEndToEndTest(unittest.TestCase):
         )
         self.assertEqual(code, 0, stdout)
         report = json.loads(stdout)
-        # 缺省输出路径 = <输入名>.modified.json，与输入同目录
+        # 缺省输出路径 = <输入名>_modified.json，与输入同目录
         self.assertEqual(
             report["output"],
-            str(self.FIXTURE.with_name(self.FIXTURE.stem + ".modified.json")),
+            str(self.FIXTURE.with_name(self.FIXTURE.stem + "_modified.json")),
         )
         default_output = Path(report["output"])
         self.addCleanup(lambda: default_output.unlink(missing_ok=True))
@@ -765,7 +765,7 @@ class CliEndToEndTest(unittest.TestCase):
         self.assertEqual(report["code"], "config_required")
 
     def test_e2e_no_export_flag(self):
-        output = self._tmp / "out.modified.json"
+        output = self._tmp / "out_modified.json"
         code, stdout = self._run(
             "--input", str(self.FIXTURE),
             "--source-field", "original_log",
