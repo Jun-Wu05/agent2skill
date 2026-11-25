@@ -67,8 +67,7 @@ from _shared.rule_gen import (
 )
 
 
-def _print_error(code: str, message: str) -> int:
-    return skill_report.print_error(code, message)
+from _shared.report import print_error as _print_error
 
 
 def _load_json_file(path: str, what: str):

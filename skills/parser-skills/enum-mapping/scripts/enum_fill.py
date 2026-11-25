@@ -70,8 +70,7 @@ from _shared.enum_targets import available_field_names, resolve_targets
 _AVAILABLE_FIELD_HINT_LIMIT = 20
 
 
-def _print_error(code: str, message: str) -> int:
-    return skill_report.print_error(code, message)
+from _shared.report import print_error as _print_error
 
 
 # ---------------------------------------------------------------------------

@@ -47,8 +47,7 @@ from _shared.enum_targets import field_vocab, resolve_targets
 _VOCAB_HINT_LIMIT = 20
 
 
-def _print_error(code: str, message: str) -> int:
-    return skill_report.print_error(code, message)
+from _shared.report import print_error as _print_error
 
 
 def _vocab_hint(config: Any) -> str:

@@ -53,8 +53,7 @@ _MAX_PROFILE_VALUES = 10
 _SUPPORTED_EXCEL_PARSERS = ("json", "delimitWithKeyMap")
 
 
-def _print_error(code: str, message: str) -> int:
-    return skill_report.print_error(code, message)
+from _shared.report import print_error as _print_error
 
 
 # ---------------------------------------------------------------------------

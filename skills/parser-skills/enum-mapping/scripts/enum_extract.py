@@ -41,8 +41,7 @@ from _shared.enum_profile import DEFAULT_MAX_VALUES, build_enum_values
 from _shared.log_input import LogInputError, load_log_table
 
 
-def _print_error(code: str, message: str) -> int:
-    return skill_report.print_error(code, message)
+from _shared.report import print_error as _print_error
 
 
 def write_mapping_template(report: Dict[str, Any], path: Path) -> Path:

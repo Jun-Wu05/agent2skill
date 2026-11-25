@@ -91,8 +91,7 @@ _BLACKLIST_HINTS = {
 }
 
 
-def _print_error(code: str, message: str) -> int:
-    return skill_report.print_error(code, message)
+from _shared.report import print_error as _print_error
 
 
 def _vocab_hint(config: Any) -> str:

@@ -58,8 +58,7 @@ from _shared.threat_policy import (
 )
 
 
-def _print_error(code: str, message: str) -> int:
-    return skill_report.print_error(code, message)
+from _shared.report import print_error as _print_error
 
 
 def build_candidate_profiles(
