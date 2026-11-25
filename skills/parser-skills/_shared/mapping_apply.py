@@ -123,9 +123,11 @@ def write_attribution(entry: MutableMapping, record: Optional[StandardField]) ->
     归属写回的单一事实源：子规则写回（匹配写标准元数据、未匹配清空）
     与手动调整（设置写四件、清除置空四件）共用；配置写回只在
     record 非 None 时调用（既有映射保留语义由调用方保证）。
+    field 写目录字段名（英文别名，平台原生形态，与威胁/事件链路同形）；
+    entity 写目录首个对象（中文）。
     """
     if record is not None:
-        entry["field"] = record.system_property_name
+        entry["field"] = record.field_name
         entry["entity"] = _canonical_entity(record)
         entry["sim"] = True
         entry["core"] = False
@@ -221,11 +223,15 @@ def sanitize_decisions(
     return decisions, report
 
 
-def collect_existing_occupants(entities: List[Mapping]) -> Dict[str, str]:
+def collect_existing_occupants(
+    entities: List[Mapping], catalog: Optional[StandardFieldCatalog] = None
+) -> Dict[str, str]:
     """收集既有映射占用的 {标准字段名: 原始字段名}（first-wins）。
 
-    只统计 normalize 条目 field 非空者；field 值原样作为占用键（目录外
-    的外部映射名同样占用）。
+    只统计 normalize 条目 field 非空者；占用键默认取 field 原文（目录外
+    的外部映射名同样占用）。传入 catalog 时，能被目录解析的占用键归一为
+    规范名（中英文别名互通——平台原生配置 field 列为英文别名，判定与
+    写回以规范名为准），查不到的保留原文。
     """
     occupants: Dict[str, str] = {}
     for entity in entities or []:
@@ -235,7 +241,12 @@ def collect_existing_occupants(entities: List[Mapping]) -> Dict[str, str]:
             field_value = str(entry.get("field") or "").strip()
             index = str(entry.get("index") or "")
             if field_value and index:
-                occupants.setdefault(field_value, index)
+                key = field_value
+                if catalog is not None:
+                    record = catalog.lookup(field_value)
+                    if record is not None:
+                        key = record.system_property_name
+                occupants.setdefault(key, index)
     return occupants
 
 
@@ -303,9 +314,9 @@ def apply_decisions_to_subrules(
 ) -> List[Dict[str, Any]]:
     """把判定写回子规则（深拷贝，不修改原数据）。
 
-    命中判定的条目：匹配成功写 field=目录规范名 / entity=目录首个对象 /
-    sim=True / core=False；未匹配一律清空（防重新映射残留旧映射）。
-    排除索引与不在判定内的条目不动。
+    命中判定的条目：匹配成功写 field=目录字段名（英文别名）/
+    entity=目录首个对象 / sim=True / core=False；未匹配一律清空
+    （防重新映射残留旧映射）。排除索引与不在判定内的条目不动。
     """
     result = copy.deepcopy(sub_rules)
     for rule in result:

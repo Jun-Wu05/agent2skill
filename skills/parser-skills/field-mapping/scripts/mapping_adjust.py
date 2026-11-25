@@ -44,7 +44,8 @@ CLI 用法:
 - clear 目标命中的全部条目都没有归属标注 → ``mapping_not_found``
   （禁止静默成功，防寻址写错被掩盖）。
 
-写回: set 写归属四件（field=目录规范名 / entity=目录首个对象 /
+写回: set 写归属四件（field=目录字段名（英文别名，平台原生形态）/
+entity=目录首个对象（中文） /
 sim=True / core=False）；clear 置空四件、条目与值映射原样保留。
 幂等: set 目标已是该标准字段（四件一致）→ 成功计 unchanged；
 clear 落空拒绝。威胁链路产物的归属标注允许手工清除（链路产物与
@@ -324,20 +325,23 @@ def main(argv: Optional[List[str]] = None) -> int:
             )
 
     # ---- set 守卫：黑名单 / 目录外 / 值映射在身 / 占用不变量 ----
+    # 目录四路索引中英文互通：先解析为目录记录，黑名单按规范名判定——
+    # 用户无论输中文名还是英文名，专属链路持有的标准都拦得住。
     records: Dict[str, StandardField] = {}
     for field, standard_name in set_specs:
-        if standard_name in MAPPING_EXCLUDED_STANDARD_FIELDS:
-            return _print_error(
-                "invalid_input",
-                f"「{standard_name}」为映射目标黑名单字段："
-                + _BLACKLIST_HINTS[standard_name],
-            )
         record = catalog.lookup(standard_name)
         if record is None:
             return _print_error(
                 "invalid_input",
                 f"标准字段名「{standard_name}」不在标准字段目录内；"
-                "请使用目录中的中文系统属性名称",
+                "请使用目录中的字段名称（中英文均可）",
+            )
+        if record.system_property_name in MAPPING_EXCLUDED_STANDARD_FIELDS:
+            canonical = record.system_property_name
+            return _print_error(
+                "invalid_input",
+                f"「{standard_name}」（{canonical}）为映射目标黑名单字段："
+                + _BLACKLIST_HINTS[canonical],
             )
         records[field] = record
 
@@ -353,11 +357,14 @@ def main(argv: Optional[List[str]] = None) -> int:
                 "请先取消值映射（枚举子模块的取消映射）再调整归属",
             )
 
-    # 占用按原始状态评估（整单写回前），同批 clear 不解锁
-    occupants = collect_existing_occupants(updated)
+    # 占用按原始状态评估（整单写回前），同批 clear 不解锁；占用键经目录
+    # 归一为规范名（中英文别名互通——平台原生配置 field 列为英文别名），
+    # 目录外的外部映射名保留原文。
+    occupants = collect_existing_occupants(updated, catalog)
     by_standard: Dict[str, List[str]] = {}
-    for field, standard_name in set_specs:
-        by_standard.setdefault(standard_name, []).append(field)
+    for field, _standard_name in set_specs:
+        canonical = records[field].system_property_name
+        by_standard.setdefault(canonical, []).append(field)
     for standard_name, fields in by_standard.items():
         if len(fields) > 1:
             return _print_error(

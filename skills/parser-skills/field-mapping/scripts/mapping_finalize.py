@@ -238,7 +238,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     decisions.update(auto)
 
     # 一对一占用裁决（既有映射恒赢 → 精确命中 → 相似度 → 原行序）
-    occupants = collect_existing_occupants(entities)
+    occupants = collect_existing_occupants(entities, catalog)
     decisions, conflicts = resolve_occupancy_conflicts(
         decisions, expected, occupants, retriever, args.top_k
     )

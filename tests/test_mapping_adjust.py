@@ -103,7 +103,7 @@ class MappingAdjustCliTest(unittest.TestCase):
         self.assertTrue(payload["output"].endswith("_adjusted.json"))
         result = self._read_output(payload)
         entry = result[0]["normalize"][0]
-        self.assertEqual(entry["field"], "源地址")
+        self.assertEqual(entry["field"], "src_address")
         self.assertEqual(entry["entity"], "流量")
         self.assertTrue(entry["sim"])
         self.assertFalse(entry["core"])
@@ -126,7 +126,7 @@ class MappingAdjustCliTest(unittest.TestCase):
         code, payload = self._run("--input", str(config), "--set", "src_ip=源地址")
         self.assertEqual(code, 0)
         result = self._read_output(payload)
-        self.assertEqual(result[0]["normalize"][0]["field"], "源地址")
+        self.assertEqual(result[0]["normalize"][0]["field"], "src_address")
         self.assertEqual(payload["sets"][0]["previous_values"], ["目的地址"])
 
     def test_set_by_standard_name(self):
@@ -140,7 +140,7 @@ class MappingAdjustCliTest(unittest.TestCase):
         code, payload = self._run("--input", str(config), "--set", "目的地址=源地址")
         self.assertEqual(code, 0)
         result = self._read_output(payload)
-        self.assertEqual(result[0]["normalize"][0]["field"], "源地址")
+        self.assertEqual(result[0]["normalize"][0]["field"], "src_address")
         self.assertEqual(result[0]["normalize"][0]["index"], "src_ip")
 
     def test_set_hits_same_index_across_entities(self):
@@ -153,8 +153,8 @@ class MappingAdjustCliTest(unittest.TestCase):
         code, payload = self._run("--input", str(config), "--set", "src_ip=源地址")
         self.assertEqual(code, 0)
         result = self._read_output(payload)
-        self.assertEqual(result[0]["normalize"][0]["field"], "源地址")
-        self.assertEqual(result[1]["normalize"][0]["field"], "源地址")
+        self.assertEqual(result[0]["normalize"][0]["field"], "src_address")
+        self.assertEqual(result[1]["normalize"][0]["field"], "src_address")
         self.assertEqual(payload["sets"][0]["changed"], 2)
 
     def test_set_idempotent_counts_unchanged(self):
@@ -162,7 +162,7 @@ class MappingAdjustCliTest(unittest.TestCase):
             [
                 make_entity(
                     entries=[
-                        make_entry("src_ip", field="源地址", entity="流量", sim=True, core=False)
+                        make_entry("src_ip", field="src_address", entity="流量", sim=True, core=False)
                     ]
                 )
             ]
@@ -187,8 +187,8 @@ class MappingAdjustCliTest(unittest.TestCase):
         )
         self.assertEqual(code, 0)
         result = self._read_output(payload)
-        self.assertEqual(result[0]["normalize"][0]["field"], "源地址")
-        self.assertEqual(result[0]["normalize"][1]["field"], "目的地址")
+        self.assertEqual(result[0]["normalize"][0]["field"], "src_address")
+        self.assertEqual(result[0]["normalize"][1]["field"], "dst_address")
         self.assertEqual(len(payload["sets"]), 2)
 
     def test_set_malformed_spec_rejected(self):
@@ -293,13 +293,13 @@ class MappingAdjustCliTest(unittest.TestCase):
             [
                 make_entity(
                     entries=[
-                        make_entry("src_ip", field="源地址", entity="流量", sim=True, core=False)
+                        make_entry("src_ip", field="src_address", entity="流量", sim=True, core=False)
                     ]
                 )
             ]
         )
         code, payload = self._run(
-            "--input", str(config), "--set", "src_ip=目的地址", "--clear", "源地址",
+            "--input", str(config), "--set", "src_ip=目的地址", "--clear", "src_address",
         )
         self.assertEqual(code, 1)
         self.assertEqual(payload["code"], "invalid_input")
@@ -311,17 +311,54 @@ class MappingAdjustCliTest(unittest.TestCase):
             [
                 make_entity(
                     entries=[
-                        make_entry("src_ip", field="源地址", entity="流量", sim=True, core=False)
+                        make_entry("src_ip", field="src_address", entity="流量", sim=True, core=False)
                     ]
                 )
             ]
         )
         code, payload = self._run(
             "--input", str(config),
-            "--set", "src_ip=目的地址", "--set", "源地址=事件结果",
+            "--set", "src_ip=目的地址", "--set", "src_address=事件结果",
         )
         self.assertEqual(code, 1)
         self.assertEqual(payload["code"], "invalid_input")
+
+    def test_set_cross_form_occupied_rejected(self):
+        # 占用键经目录归一（中英文别名互通）：配置持英文别名 host_name，
+        # set 中文名「主机名称」也能识别为同一标准 → 拒绝并报占用者
+        config = self._config(
+            [
+                make_entity(
+                    entries=[
+                        make_entry("other_ip", field="host_name", entity="流量", sim=True, core=False),
+                        make_entry("src_ip"),
+                    ]
+                )
+            ]
+        )
+        code, payload = self._run("--input", str(config), "--set", "src_ip=主机名称")
+        self.assertEqual(code, 1)
+        self.assertEqual(payload["code"], "mapping_target_occupied")
+        self.assertIn("other_ip", payload["message"])
+
+    def test_set_cross_form_same_batch_duplicate_rejected(self):
+        # 同批两个 set 经中英文名指向同一标准 → 归一后判重拒绝
+        config = self._config(
+            [make_entity(entries=[make_entry("a"), make_entry("b")])]
+        )
+        code, payload = self._run(
+            "--input", str(config), "--set", "a=主机IP", "--set", "b=host_ip",
+        )
+        self.assertEqual(code, 1)
+        self.assertEqual(payload["code"], "mapping_target_occupied")
+
+    def test_blacklist_english_alias_rejected(self):
+        # 黑名单按规范名判定：英文名 event_name 同样拦截（事件名称）
+        config = self._config([make_entity(entries=[make_entry("src_ip")])])
+        code, payload = self._run("--input", str(config), "--set", "src_ip=event_name")
+        self.assertEqual(code, 1)
+        self.assertEqual(payload["code"], "invalid_input")
+        self.assertIn("事件名称", payload["message"])
 
     def test_set_mixed_index_field_hits_rejected(self):
         # 目标名既是某条目 index 又是另一条目 field：命中多个原始字段 → 歧义拒绝
@@ -387,11 +424,11 @@ class MappingAdjustCliTest(unittest.TestCase):
         config = self._config(
             [
                 make_entity(
-                    entries=[make_entry("src_ip", field="源地址", entity="流量", sim=True, core=False)]
+                    entries=[make_entry("src_ip", field="src_address", entity="流量", sim=True, core=False)]
                 )
             ]
         )
-        code, payload = self._run("--input", str(config), "--clear", "源地址")
+        code, payload = self._run("--input", str(config), "--clear", "src_address")
         self.assertEqual(code, 0)
         result = self._read_output(payload)
         self.assertIsNone(result[0]["normalize"][0]["field"])
@@ -454,7 +491,7 @@ class MappingAdjustCliTest(unittest.TestCase):
         self.assertEqual(code, 0)
         result = self._read_output(payload)
         self.assertIsNone(result[0]["normalize"][0]["field"])  # r1 不动
-        self.assertEqual(result[1]["normalize"][0]["field"], "源地址")
+        self.assertEqual(result[1]["normalize"][0]["field"], "src_address")
         self.assertEqual(payload["sets"][0]["changed"], 1)
 
     def test_target_unknown_rejected(self):
@@ -477,7 +514,7 @@ class MappingAdjustCliTest(unittest.TestCase):
         )
         self.assertEqual(code, 0)
         result = self._read_output(payload)
-        self.assertEqual(result[0]["normalize"][0]["field"], "源地址")
+        self.assertEqual(result[0]["normalize"][0]["field"], "src_address")
         self.assertIsNone(result[1]["normalize"][0]["field"])
 
     # ---------- 原子性与 IO ----------

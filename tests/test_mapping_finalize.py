@@ -189,14 +189,14 @@ class WhiteboardPathEndToEndTest(unittest.TestCase):
         )
         login = next(r for r in mapped if r["name"] == "登录_json_子规则")
         by_index = {e["index"]: e for e in login["normalize"]}
-        self.assertEqual(by_index["dst_ip"]["field"], "目的地址")
+        self.assertEqual(by_index["dst_ip"]["field"], "dst_address")
         self.assertTrue(by_index["dst_ip"]["sim"])
         self.assertFalse(by_index["dst_ip"]["core"])
         self.assertTrue(by_index["dst_ip"]["entity"])  # 目录首个对象
-        self.assertEqual(by_index["src_address"]["field"], "源地址")
+        self.assertEqual(by_index["src_address"]["field"], "src_address")
         self.assertIsNone(by_index["src_ip"]["field"])  # 占用冲突败者清空
         self.assertIsNone(by_index["user"]["field"])  # agent 判未匹配清空
-        self.assertEqual(by_index["http_method"]["field"], "HTTP请求方法")  # 枚举短路
+        self.assertEqual(by_index["http_method"]["field"], "http_method")  # 枚举短路（HTTP请求方法的字段名与 index 同形）
         self.assertEqual(by_index["日志类型"]["field"], "log_type")  # 排除索引不动
         self.assertEqual(by_index["original_log"]["field"], "original_log")
         # 事件标注写入（登录事件 → 信息）
@@ -211,8 +211,8 @@ class WhiteboardPathEndToEndTest(unittest.TestCase):
         # block 子规则：全局判定逐子规则写回；无事件判定不写
         block = next(r for r in mapped if r["name"] == "block_json_子规则")
         block_by_index = {e["index"]: e for e in block["normalize"]}
-        self.assertEqual(block_by_index["dst_ip"]["field"], "目的地址")
-        self.assertEqual(block_by_index["http_method"]["field"], "HTTP请求方法")
+        self.assertEqual(block_by_index["dst_ip"]["field"], "dst_address")
+        self.assertEqual(block_by_index["http_method"]["field"], "http_method")
         self.assertEqual(block["parser"]["filter"], [])
 
         # 入口规则
@@ -308,7 +308,7 @@ class ConfigPathEndToEndTest(unittest.TestCase):
         )
         updated = json.loads(Path(payload["output"]).read_text(encoding="utf-8"))
         by_index = {e["index"]: e for e in updated[0]["normalize"]}
-        self.assertEqual(by_index["dst_ip"]["field"], "目的地址")
+        self.assertEqual(by_index["dst_ip"]["field"], "dst_address")
         self.assertTrue(by_index["dst_ip"]["sim"])
         # 未匹配保持原样（field 仍为空），既有映射保留
         self.assertIsNone(by_index["user"]["field"])
