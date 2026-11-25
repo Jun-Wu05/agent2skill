@@ -29,6 +29,43 @@ DOWNLOAD_NAME_TEMPLATES: dict[str, str] = {
 
 _TIMESTAMP_FORMAT = "%Y%m%d_%H%M"
 
+# 缺省产物后缀总表：语义键 → 文件名后缀（含 .json）。
+# 各脚本缺省产物路径与 argparse help 文本一律从这张表取值，
+# 改名只改此处一行（对齐 DOWNLOAD_NAME_TEMPLATES 的收口先例）。
+DEFAULT_OUTPUT_SUFFIXES: dict[str, str] = {
+    "modified": "_modified.json",               # field-adjust 五子命令（cli.py）
+    "adjusted": "_adjusted.json",               # field-mapping 手动调整
+    "candidates": "_candidates.json",           # field-mapping 候选开单
+    "mapped_subrules": "_mapped_subrules.json", # field-mapping 收口（白板路径）
+    "entry_rules": "_entry_rules.json",         # field-mapping 收口（入口规则）
+    "mapped_config": "_mapped_config.json",     # field-mapping 收口（配置路径）
+    "classified": "_classified.json",           # log-classification 收口
+    "subrules": "_subrules.json",               # log-classification 收口（白板子规则）
+    "stats": "_stats.json",                     # log-classification 统计
+    "enum_values": "_enum_values.json",         # enum-mapping 提取
+    "enumfilled": "_enumfilled.json",           # enum-mapping 填充
+    "enumunmapped": "_enumunmapped.json",       # enum-mapping 取消映射
+    "threat_worklist": "_threat_worklist.json", # threat-type 工作单
+    "threatfilled": "_threatfilled.json",       # threat-type 收口
+}
+
+
+def default_output_path(
+    input_path: str | Path, kind: str, *, base: str | None = None
+) -> Path:
+    """按语义键拼装缺省产物路径：<输入同目录>/<基名><后缀>。
+
+    kind 从 DEFAULT_OUTPUT_SUFFIXES 取后缀，未知键抛 ValueError；
+    base 缺省取输入文件 stem（含内部点号），脚本可传自己算好的基名
+    （如 mapping_finalize 白板路径剥掉 _subrules 后的基名）。
+    """
+    suffix = DEFAULT_OUTPUT_SUFFIXES.get(kind)
+    if suffix is None:
+        raise ValueError(f"不支持的缺省产物类型: {kind}")
+    base_stem = input_path.stem if base is None else base
+    return Path(input_path).with_name(base_stem + suffix)
+
+
 
 def print_error(code: str, message: str) -> int:
     """打印稳定错误码 JSON 到 stdout，返回失败退出码 1。"""
