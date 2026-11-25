@@ -65,7 +65,7 @@ def _build_parser(spec: CliSpec) -> argparse.ArgumentParser:
         parser.add_argument(*flags, **kwargs)
     parser.add_argument(
         "--output", "-o", default=None,
-        help="修改后配置 JSON 输出路径（缺省 <输入名>_modified.json）",
+        help=f"修改后配置 JSON 输出路径（缺省 <输入名>{skill_report.DEFAULT_OUTPUT_SUFFIXES['modified']}）",
     )
     parser.add_argument(
         "--target", default=None,
@@ -129,7 +129,7 @@ def run_cli(spec: CliSpec, argv: Optional[List[str]] = None) -> int:
     output = (
         Path(args.output)
         if args.output
-        else input_path.with_name(input_path.stem + "_modified.json")
+        else skill_report.default_output_path(input_path, "modified")
     )
     written = skill_report.write_result(
         result["data"], output, make_export=not args.no_export

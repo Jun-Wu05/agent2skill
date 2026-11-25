@@ -47,8 +47,7 @@ from _shared.enum_targets import field_vocab, resolve_targets
 _VOCAB_HINT_LIMIT = 20
 
 
-def _print_error(code: str, message: str) -> int:
-    return skill_report.print_error(code, message)
+from _shared.report import print_error as _print_error
 
 
 def _vocab_hint(config: Any) -> str:
@@ -80,7 +79,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--output", "-o", default=None,
-        help="修改后配置 JSON 输出路径（缺省 <输入名>_enumunmapped.json）",
+        help=f"修改后配置 JSON 输出路径（缺省 <输入名>{skill_report.DEFAULT_OUTPUT_SUFFIXES['enumunmapped']}）",
     )
     parser.add_argument(
         "--no-export", action="store_true",
@@ -165,7 +164,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     output = (
         Path(args.output)
         if args.output
-        else input_path.with_name(input_path.stem + "_enumunmapped.json")
+        else skill_report.default_output_path(input_path, "enumunmapped")
     )
     written = skill_report.write_result(
         updated, output, kind="enummapping_config", make_export=not args.no_export

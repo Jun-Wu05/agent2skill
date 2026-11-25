@@ -53,8 +53,7 @@ _MAX_PROFILE_VALUES = 10
 _SUPPORTED_EXCEL_PARSERS = ("json", "delimitWithKeyMap")
 
 
-def _print_error(code: str, message: str) -> int:
-    return skill_report.print_error(code, message)
+from _shared.report import print_error as _print_error
 
 
 # ---------------------------------------------------------------------------
@@ -268,7 +267,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--output", "-o", default=None,
-        help="候选 JSON 输出路径（缺省 <输入名>_candidates.json）",
+        help=f"候选 JSON 输出路径（缺省 <输入名>{skill_report.DEFAULT_OUTPUT_SUFFIXES['candidates']}）",
     )
     parser.add_argument(
         "--top-k", type=int, default=DEFAULT_TOP_K,
@@ -305,7 +304,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     output = (
         Path(args.output)
         if args.output
-        else input_path.with_name(input_path.stem + "_candidates.json")
+        else skill_report.default_output_path(input_path, "candidates")
     )
 
     if not rules:

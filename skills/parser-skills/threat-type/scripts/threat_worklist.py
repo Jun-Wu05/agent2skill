@@ -58,8 +58,7 @@ from _shared.threat_policy import (
 )
 
 
-def _print_error(code: str, message: str) -> int:
-    return skill_report.print_error(code, message)
+from _shared.report import print_error as _print_error
 
 
 def build_candidate_profiles(
@@ -152,7 +151,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--output", "-o", default=None,
-        help="工作单 JSON 输出路径（缺省 <输入名>_threat_worklist.json）",
+        help=f"工作单 JSON 输出路径（缺省 <输入名>{skill_report.DEFAULT_OUTPUT_SUFFIXES['threat_worklist']}）",
     )
     args = parser.parse_args(argv)
 
@@ -204,7 +203,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     output = (
         Path(args.output)
         if args.output
-        else input_path.with_name(input_path.stem + "_threat_worklist.json")
+        else skill_report.default_output_path(input_path, "threat_worklist")
     )
     worklist: Dict[str, Any] = {
         "input": str(input_path),

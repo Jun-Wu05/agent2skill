@@ -50,8 +50,7 @@ from _shared.log_input import LogInputError, load_log_table
 from _shared.rule_gen import generate_sub_rules
 
 
-def _print_error(code: str, message: str) -> int:
-    return skill_report.print_error(code, message)
+from _shared.report import print_error as _print_error
 
 
 def _load_json_file(path: str, what: str):
@@ -247,11 +246,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--labels", required=True, help="宿主 agent 语义标注 JSON 路径")
     parser.add_argument(
         "--output", "-o", default=None,
-        help="分类结果 JSON 输出路径（缺省 <输入名>_classified.json）",
+        help=f"分类结果 JSON 输出路径（缺省 <输入名>{skill_report.DEFAULT_OUTPUT_SUFFIXES['classified']}）",
     )
     parser.add_argument(
         "--subrules-output", default=None,
-        help="白板子规则 JSON 输出路径（缺省 <输入名>_subrules.json）",
+        help=f"白板子规则 JSON 输出路径（缺省 <输入名>{skill_report.DEFAULT_OUTPUT_SUFFIXES['subrules']}）",
     )
     parser.add_argument(
         "--no-export", action="store_true",
@@ -287,12 +286,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     output = (
         Path(args.output)
         if args.output
-        else input_path.with_name(input_path.stem + "_classified.json")
+        else skill_report.default_output_path(input_path, "classified")
     )
     subrules_output = (
         Path(args.subrules_output)
         if args.subrules_output
-        else input_path.with_name(input_path.stem + "_subrules.json")
+        else skill_report.default_output_path(input_path, "subrules")
     )
 
     raw_lines = table["raw_log_lines"]

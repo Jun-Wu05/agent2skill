@@ -41,8 +41,7 @@ from _shared.enum_profile import DEFAULT_MAX_VALUES, build_enum_values
 from _shared.log_input import LogInputError, load_log_table
 
 
-def _print_error(code: str, message: str) -> int:
-    return skill_report.print_error(code, message)
+from _shared.report import print_error as _print_error
 
 
 def write_mapping_template(report: Dict[str, Any], path: Path) -> Path:
@@ -99,7 +98,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--output", "-o", default=None,
-        help="枚举值 JSON 输出路径（缺省 <输入名>_enum_values.json）",
+        help=f"枚举值 JSON 输出路径（缺省 <输入名>{skill_report.DEFAULT_OUTPUT_SUFFIXES['enum_values']}）",
     )
     parser.add_argument(
         "--template", action="store_true",
@@ -122,7 +121,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     output = (
         Path(args.output)
         if args.output
-        else input_path.with_name(input_path.stem + "_enum_values.json")
+        else skill_report.default_output_path(input_path, "enum_values")
     )
 
     report = build_enum_values(
