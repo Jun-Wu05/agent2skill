@@ -227,7 +227,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--output", "-o", default=None,
-        help="统计报告 JSON 输出路径（缺省 <输入名>_stats.json）",
+        help=f"统计报告 JSON 输出路径（缺省 <输入名>{skill_report.DEFAULT_OUTPUT_SUFFIXES['stats']}）",
     )
     args = parser.parse_args(argv)
 
@@ -246,7 +246,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     output = (
         Path(args.output)
         if args.output
-        else input_path.with_name(input_path.stem + "_stats.json")
+        else skill_report.default_output_path(input_path, "stats")
     )
 
     report = build_stats_report(

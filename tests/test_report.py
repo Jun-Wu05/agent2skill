@@ -52,3 +52,24 @@ class TestDefaultOutputPath:
             "threat_worklist", "threatfilled",
         }
         assert expected == set(DEFAULT_OUTPUT_SUFFIXES)
+
+
+class TestHelpTextFromCatalog:
+    def test_mapping_adjust_help_uses_catalog(self):
+        """help 文本与总表同源：--help 里的缺省名由总表拼接而来。"""
+        import contextlib
+        import io
+
+        SCRIPTS = SKILLS / "field-mapping" / "scripts"
+        if str(SCRIPTS) not in sys.path:
+            sys.path.insert(0, str(SCRIPTS))
+        import mapping_adjust
+
+        buffer = io.StringIO()
+        with pytest.raises(SystemExit) as excinfo, \
+                contextlib.redirect_stdout(buffer):
+            mapping_adjust.main(["--help"])
+        assert excinfo.value.code == 0
+        assert (
+            f"缺省 <输入名>{DEFAULT_OUTPUT_SUFFIXES['adjusted']}" in buffer.getvalue()
+        )

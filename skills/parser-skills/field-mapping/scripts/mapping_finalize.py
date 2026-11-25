@@ -159,7 +159,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--vendor", default=None, help="数据源厂商（白板路径必填）")
     parser.add_argument("--product", default=None, help="数据源产品（白板路径必填）")
     parser.add_argument("--output", "-o", default=None, help="映射结果 JSON 输出路径（缺省按路径命名）")
-    parser.add_argument("--entry-output", default=None, help="入口规则 JSON 输出路径（仅白板路径，缺省 <输入名>_entry_rules.json）")
+    parser.add_argument("--entry-output", default=None, help=f"入口规则 JSON 输出路径（仅白板路径，缺省 <输入名>{skill_report.DEFAULT_OUTPUT_SUFFIXES['entry_rules']}）")
     parser.add_argument("--no-export", action="store_true", help="不产出 Base64 导出文件（缺省会一并产出）")
     parser.add_argument("--top-k", type=int, default=DEFAULT_TOP_K, help=f"候选校验上限，与阶段①一致（缺省 {DEFAULT_TOP_K}）")
     args = parser.parse_args(argv)
@@ -265,12 +265,16 @@ def main(argv: Optional[List[str]] = None) -> int:
         mapped_output = (
             Path(args.output)
             if args.output
-            else input_path.with_name(base + "_mapped_subrules.json")
+            else skill_report.default_output_path(
+                input_path, "mapped_subrules", base=base
+            )
         )
         entry_output = (
             Path(args.entry_output)
             if args.entry_output
-            else input_path.with_name(base + "_entry_rules.json")
+            else skill_report.default_output_path(
+                input_path, "entry_rules", base=base
+            )
         )
         written = skill_report.write_result(
             mapped, mapped_output, make_export=not args.no_export,
@@ -314,7 +318,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         output = (
             Path(args.output)
             if args.output
-            else input_path.with_name(base + "_mapped_config.json")
+            else skill_report.default_output_path(input_path, "mapped_config", base=base)
         )
         written = skill_report.write_result(
             updated, output, make_export=not args.no_export,
